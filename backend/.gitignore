@@ -1,0 +1,58 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment Variables
+.env
+.env.local
+
+# Google Cloud Credentials (IMPORTANT!)
+*.json
+service-account-key.json
+credentials.json
+google-credentials/
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# AI Model files (large files)
+*.pth
+*.h5
+*.pkl
+*.safetensors
+models/weights/
+checkpoints/
+
+# Training data (if storing locally)
+data/raw/
+data/processed/
+*.csv
+*.parquet
