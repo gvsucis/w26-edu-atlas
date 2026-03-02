@@ -44,7 +44,7 @@ class LessonService:
         
         if not 1 <= request.concepts_count <= 20:
             raise ValueError(
-                f"Invalid concepts_count '{request.concepts_count}'. "
+                f"Invalid amount of concepts '{request.concepts_count}'. "
                 f"Must be between 1 and 20"
             )
 
