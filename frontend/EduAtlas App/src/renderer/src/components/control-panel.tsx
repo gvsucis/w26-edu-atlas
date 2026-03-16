@@ -21,6 +21,17 @@ const defaults = {
   activeVoice: true
 }
 
+const levelMetrics: Record<string, { ease: number; easeLabel: string; grade: string; baseSentence: number; baseTerms: number }> = {
+  'Grade K-1':     { ease: 95, easeLabel: 'Very Easy',        grade: 'K–1',  baseSentence: 8,  baseTerms: 2  },
+  'Grade 2-3':     { ease: 85, easeLabel: 'Easy',             grade: '2–3',  baseSentence: 10, baseTerms: 4  },
+  'Grade 4-5':     { ease: 75, easeLabel: 'Fairly Easy',      grade: '4–5',  baseSentence: 13, baseTerms: 6  },
+  'Grade 6-7':     { ease: 65, easeLabel: 'Standard',         grade: '6–7',  baseSentence: 16, baseTerms: 9  },
+  'Grade 8':       { ease: 58, easeLabel: 'Standard',         grade: '8',    baseSentence: 18, baseTerms: 11 },
+  'Grade 9-10':    { ease: 50, easeLabel: 'Fairly Difficult', grade: '9–10', baseSentence: 20, baseTerms: 14 },
+  'Grade 11-12':   { ease: 38, easeLabel: 'Difficult',        grade: '11–12',baseSentence: 23, baseTerms: 17 },
+  'College Level': { ease: 25, easeLabel: 'Very Difficult',   grade: '13+',  baseSentence: 26, baseTerms: 20 },
+}
+
 function loadSettings(): typeof defaults {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -261,27 +272,34 @@ export default function ControlPanel(): React.ReactNode {
                 <CardDescription>Current output analysis</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Avg. Sentence Length</span>
-                    <span className="text-sm font-medium">16 words</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Reading Ease</span>
-                    <span className="text-sm font-medium">68 (Standard)</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Grade</span>
-                    <span className="text-sm font-medium">9</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Academic Terms</span>
-                    <span className="text-sm font-medium">12 per page</span>
-                  </div>
-                </div>
+                {(() => {
+                  const m = levelMetrics[readingLevel]
+                  const sentenceLen = sentenceLimit ? Math.min(m.baseSentence, 18) : m.baseSentence
+                  const terms = academicVocab ? m.baseTerms : Math.max(1, Math.round(m.baseTerms / 2))
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Avg. Sentence Length</span>
+                        <span className="text-sm font-medium">{sentenceLen} words</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Reading Ease</span>
+                        <span className="text-sm font-medium">{m.ease} ({m.easeLabel})</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Grade</span>
+                        <span className="text-sm font-medium">{m.grade}</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Academic Terms</span>
+                        <span className="text-sm font-medium">{terms} per page</span>
+                      </div>
+                    </div>
+                  )
+                })()}
               </CardContent>
             </Card>
           </div>
