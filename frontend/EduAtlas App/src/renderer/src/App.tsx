@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Brain, LayoutDashboard, Settings, GraduationCap, Menu, LogOut, User } from 'lucide-react'
 import { Button } from './components/button'
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from './components/sheet'
@@ -20,6 +20,20 @@ function loadProfile(): InstructorProfile | null {
 function App(): React.JSX.Element {
   const [currentView, setCurrentView] = useState<View>('dashboard')
   const [profile, setProfile] = useState<InstructorProfile | null>(loadProfile)
+  const [backendStatus, setBackendStatus] = useState(false)
+
+  async function checkHealth(): Promise<void> {
+    try {
+      const ok = await window.api.checkHealth()
+      setBackendStatus(ok)
+    } catch {
+      setBackendStatus(false)
+    }
+  }
+
+  useEffect(() => {
+    checkHealth()
+  }, [currentView])
 
   function handleLogin(p: InstructorProfile): void {
     setProfile(p)
@@ -168,8 +182,8 @@ function App(): React.JSX.Element {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="flex items-center space-x-2">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm text-muted-foreground">AI System Active</span>
+              <div className={`h-2 w-2 rounded-full ${backendStatus ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+              <span className="text-sm text-muted-foreground">{backendStatus ? 'AI System Active' : 'AI System Offline'}</span>
             </div>
             <div className="flex items-center space-x-1.5 text-sm text-muted-foreground">
               <div className="bg-blue-600 p-1 rounded-md">
