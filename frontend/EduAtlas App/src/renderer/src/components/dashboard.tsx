@@ -201,7 +201,7 @@ export default function Dashboard(): React.ReactNode {
                   </div>
                 </div>
 
-                <Button className="w-full" onClick={generateMaterials} disabled={isGenerating}>
+                <Button className="w-full" onClick={generateMaterials} disabled={isGenerating || !subject || !lessonTopic.trim() || !duration || objectives.length === 0}>
                   <Sparkles className="h-4 w-4 mr-2" />
                   {isGenerating ? 'Generating Materials...' : 'Generate Instructional Materials'}
                 </Button>
