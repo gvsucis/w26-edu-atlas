@@ -118,8 +118,9 @@ export default function ControlPanel(): React.ReactNode {
                         <SelectValue placeholder="Select capacity" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="5">5 items (Beginner)</SelectItem>
-                        <SelectItem value="7">7 items (Standard)</SelectItem>
+                        <SelectItem value="3">3 items (Beginner)</SelectItem>
+                        <SelectItem value="5">5 items (Standard)</SelectItem>
+                        <SelectItem value="7">7 items (Intermediate)</SelectItem>
                         <SelectItem value="9">9 items (Advanced)</SelectItem>
                       </SelectContent>
                     </Select>
@@ -167,7 +168,7 @@ export default function ControlPanel(): React.ReactNode {
                       <p className="text-sm font-medium">Working Memory Limit</p>
                       <p className="text-xs text-muted-foreground">
                         Max {workingMemory} concepts per section &mdash;{' '}
-                        {workingMemory === '5' ? 'Beginner' : workingMemory === '7' ? 'Standard' : 'Advanced'}
+                        {workingMemory === '3' ? 'Beginner' : workingMemory === '5' ? 'Standard' : workingMemory === '7' ? 'Intermediate' : 'Advanced'}
                       </p>
                     </div>
                   </div>
