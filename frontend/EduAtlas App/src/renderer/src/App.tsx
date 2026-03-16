@@ -171,8 +171,11 @@ function App(): React.JSX.Element {
               <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
               <span className="text-sm text-muted-foreground">AI System Active</span>
             </div>
-            <div className="text-sm text-muted-foreground">
-              EduStaff &middot; Capstone Project &middot; January 2026
+            <div className="flex items-center space-x-1.5 text-sm text-muted-foreground">
+              <div className="bg-blue-600 p-1 rounded-md">
+                <Brain className="h-3.5 w-3.5 text-white" />
+              </div>
+              <span>EduStaff</span>
             </div>
           </div>
         </div>
