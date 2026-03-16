@@ -46,8 +46,14 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.handle('health-check', async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/health')
+      return res.ok
+    } catch {
+      return false
+    }
+  })
 
   createWindow()
 
