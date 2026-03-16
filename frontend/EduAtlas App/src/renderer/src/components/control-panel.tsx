@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Zap, Brain } from 'lucide-react'
+import { Zap, Brain, Check } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './card'
 import { Button } from './button'
 import { Switch } from './switch'
@@ -9,15 +9,59 @@ import { Alert, AlertTitle, AlertDescription } from './alert'
 import { Separator } from './separator'
 import { Label } from './label'
 
-export default function ControlPanel(): React.ReactNode {
-  const [workingMemory, setWorkingMemory] = useState('7')
-  const [autoChunking, setAutoChunking] = useState(true)
-  const [progressiveDisclosure, setProgressiveDisclosure] = useState(true)
+const STORAGE_KEY = 'eduatlas_control_panel'
 
-  const [readingLevel, setReadingLevel] = useState('Grade 9-10')
-  const [academicVocab, setAcademicVocab] = useState(true)
-  const [sentenceLimit, setSentenceLimit] = useState(true)
-  const [activeVoice, setActiveVoice] = useState(true)
+const defaults = {
+  workingMemory: '7',
+  autoChunking: true,
+  progressiveDisclosure: true,
+  readingLevel: 'Grade 6-7',
+  academicVocab: true,
+  sentenceLimit: true,
+  activeVoice: true
+}
+
+function loadSettings(): typeof defaults {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? { ...defaults, ...(JSON.parse(raw) as typeof defaults) } : defaults
+  } catch {
+    return defaults
+  }
+}
+
+export default function ControlPanel(): React.ReactNode {
+  const saved = loadSettings()
+  const [workingMemory, setWorkingMemory] = useState(saved.workingMemory)
+  const [autoChunking, setAutoChunking] = useState(saved.autoChunking)
+  const [progressiveDisclosure, setProgressiveDisclosure] = useState(saved.progressiveDisclosure)
+
+  const [readingLevel, setReadingLevel] = useState(saved.readingLevel)
+  const [academicVocab, setAcademicVocab] = useState(saved.academicVocab)
+  const [sentenceLimit, setSentenceLimit] = useState(saved.sentenceLimit)
+  const [activeVoice, setActiveVoice] = useState(saved.activeVoice)
+
+  const [saved_, setSaved_] = useState(false)
+
+  function handleSave(): void {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ workingMemory, autoChunking, progressiveDisclosure, readingLevel, academicVocab, sentenceLimit, activeVoice })
+    )
+    setSaved_(true)
+    setTimeout(() => setSaved_(false), 2000)
+  }
+
+  function handleReset(): void {
+    setWorkingMemory(defaults.workingMemory)
+    setAutoChunking(defaults.autoChunking)
+    setProgressiveDisclosure(defaults.progressiveDisclosure)
+    setReadingLevel(defaults.readingLevel)
+    setAcademicVocab(defaults.academicVocab)
+    setSentenceLimit(defaults.sentenceLimit)
+    setActiveVoice(defaults.activeVoice)
+    localStorage.removeItem(STORAGE_KEY)
+  }
 
   return (
     <div className="space-y-6">
@@ -166,6 +210,9 @@ export default function ControlPanel(): React.ReactNode {
                         <SelectValue placeholder="Select reading level" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="Grade K-1">Grade K-1</SelectItem>
+                        <SelectItem value="Grade 2-3">Grade 2-3</SelectItem>
+                        <SelectItem value="Grade 4-5">Grade 4-5</SelectItem>
                         <SelectItem value="Grade 6-7">Grade 6-7</SelectItem>
                         <SelectItem value="Grade 8">Grade 8</SelectItem>
                         <SelectItem value="Grade 9-10">Grade 9-10</SelectItem>
@@ -249,8 +296,17 @@ export default function ControlPanel(): React.ReactNode {
               <span className="text-sm">All constraints active and enforced</span>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline">Reset to Defaults</Button>
-              <Button>Save Configuration</Button>
+              <Button variant="outline" onClick={handleReset}>Reset to Defaults</Button>
+              <Button onClick={handleSave}>
+                {saved_ ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Saved
+                  </>
+                ) : (
+                  'Save Configuration'
+                )}
+              </Button>
             </div>
           </div>
         </CardContent>
