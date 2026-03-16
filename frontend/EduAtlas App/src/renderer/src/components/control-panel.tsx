@@ -162,38 +162,36 @@ export default function ControlPanel(): React.ReactNode {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5" />
+                    <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5 shrink-0" />
                     <div>
-                      <p className="text-sm font-medium">Intrinsic Load Optimization</p>
+                      <p className="text-sm font-medium">Working Memory Limit</p>
                       <p className="text-xs text-muted-foreground">
-                        Breaking complex concepts into prerequisite chains
+                        Max {workingMemory} concepts per section &mdash;{' '}
+                        {workingMemory === '5' ? 'Beginner' : workingMemory === '7' ? 'Standard' : 'Advanced'}
                       </p>
                     </div>
                   </div>
+                  <Separator />
                   <div className="flex items-start gap-3">
-                    <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5" />
+                    <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${autoChunking ? 'bg-green-500' : 'bg-yellow-500'}`} />
                     <div>
-                      <p className="text-sm font-medium">Extraneous Load Reduction</p>
+                      <p className="text-sm font-medium">Auto-Chunking</p>
                       <p className="text-xs text-muted-foreground">
-                        Minimizing irrelevant information and distractions
+                        {autoChunking
+                          ? 'Content is automatically broken into manageable chunks'
+                          : 'Content chunking is disabled. Full sections shown at once'}
                       </p>
                     </div>
                   </div>
+                  <Separator />
                   <div className="flex items-start gap-3">
-                    <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5" />
+                    <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${progressiveDisclosure ? 'bg-green-500' : 'bg-yellow-500'}`} />
                     <div>
-                      <p className="text-sm font-medium">Germane Load Enhancement</p>
+                      <p className="text-sm font-medium">Progressive Disclosure</p>
                       <p className="text-xs text-muted-foreground">
-                        Promoting schema construction through examples
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-2 w-2 rounded-full bg-yellow-500 mt-1.5" />
-                    <div>
-                      <p className="text-sm font-medium">Multimodal Integration</p>
-                      <p className="text-xs text-muted-foreground">
-                        Balancing text, visual, and interactive elements
+                        {progressiveDisclosure
+                          ? 'Information is revealed gradually as the learner progresses'
+                          : 'All content shown upfront, no staged reveal'}
                       </p>
                     </div>
                   </div>
