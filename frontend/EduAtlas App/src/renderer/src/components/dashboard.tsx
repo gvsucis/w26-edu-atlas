@@ -23,13 +23,11 @@ interface GeneratedMaterial {
 }
 
 export default function Dashboard(): React.ReactNode {
-  const [subject, setSubject] = useState('Biology')
-
-  const [lessonTopic, setLessonTopic] = useState('Photosynthesis and Energy Transfer')
+  const [subject, setSubject] = useState('Science')
+  const [lessonTopic, setLessonTopic] = useState('')
   const [duration, setDuration] = useState(45)
   const [classroomContext, setClassroomContext] = useState('')
   const [objectives, setObjectives] = useState<LearningObjective[]>([
-    { id: 1, bloomLevel: 'Understand', text: 'Explain the role of photosynthesis in ecosystems' }
   ])
   const [newBloomLevel, setNewBloomLevel] = useState('Remember')
   const [newObjectiveText, setNewObjectiveText] = useState('')
@@ -97,12 +95,12 @@ export default function Dashboard(): React.ReactNode {
                       <SelectValue placeholder="Select subject" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Biology">Biology</SelectItem>
-                      <SelectItem value="Chemistry">Chemistry</SelectItem>
-                      <SelectItem value="Physics">Physics</SelectItem>
+                      <SelectItem value="Science">Science</SelectItem>
                       <SelectItem value="Mathematics">Mathematics</SelectItem>
-                      <SelectItem value="English Language Arts">English Language Arts</SelectItem>
-                      <SelectItem value="History">History</SelectItem>
+                      <SelectItem value="Language Arts">Language Arts</SelectItem>
+                      <SelectItem value="Social Studies">Social Studies</SelectItem>
+                      <SelectItem value="Art">Art</SelectItem>
+                      <SelectItem value="Physical Education">Physical Education</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
