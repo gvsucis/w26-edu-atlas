@@ -29,7 +29,7 @@ export default function Dashboard(): React.ReactNode {
   const [duration, setDuration] = useState(45)
   const [classroomContext, setClassroomContext] = useState('')
   const [objectives, setObjectives] = useState<LearningObjective[]>([
-    { id: 1, bloomLevel: 'Analyze', text: 'Analyze the impact of photosynthesis on ecosystems' }
+    { id: 1, bloomLevel: 'Understand', text: 'Explain the role of photosynthesis in ecosystems' }
   ])
   const [newBloomLevel, setNewBloomLevel] = useState('Remember')
   const [newObjectiveText, setNewObjectiveText] = useState('')
@@ -182,9 +182,6 @@ export default function Dashboard(): React.ReactNode {
                           <SelectItem value="Remember">Remember</SelectItem>
                           <SelectItem value="Understand">Understand</SelectItem>
                           <SelectItem value="Apply">Apply</SelectItem>
-                          <SelectItem value="Analyze">Analyze</SelectItem>
-                          <SelectItem value="Evaluate">Evaluate</SelectItem>
-                          <SelectItem value="Create">Create</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
