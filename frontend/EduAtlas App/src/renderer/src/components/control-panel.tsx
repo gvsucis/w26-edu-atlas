@@ -42,25 +42,26 @@ function loadSettings(): typeof defaults {
 }
 
 export default function ControlPanel(): React.ReactNode {
-  const saved = loadSettings()
-  const [workingMemory, setWorkingMemory] = useState(saved.workingMemory)
-  const [autoChunking, setAutoChunking] = useState(saved.autoChunking)
-  const [progressiveDisclosure, setProgressiveDisclosure] = useState(saved.progressiveDisclosure)
+  const initialSettings = loadSettings()
+  const [workingMemory, setWorkingMemory] = useState(initialSettings.workingMemory)
+  const [autoChunking, setAutoChunking] = useState(initialSettings.autoChunking)
+  const [progressiveDisclosure, setProgressiveDisclosure] = useState(initialSettings.progressiveDisclosure)
 
-  const [readingLevel, setReadingLevel] = useState(saved.readingLevel)
-  const [academicVocab, setAcademicVocab] = useState(saved.academicVocab)
-  const [sentenceLimit, setSentenceLimit] = useState(saved.sentenceLimit)
-  const [activeVoice, setActiveVoice] = useState(saved.activeVoice)
+  const [readingLevel, setReadingLevel] = useState(initialSettings.readingLevel)
+  const [academicVocab, setAcademicVocab] = useState(initialSettings.academicVocab)
+  const [sentenceLimit, setSentenceLimit] = useState(initialSettings.sentenceLimit)
+  const [activeVoice, setActiveVoice] = useState(initialSettings.activeVoice)
 
-  const [saved_, setSaved_] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
+  const [isReset, setIsReset] = useState(false)
 
   function handleSave(): void {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ workingMemory, autoChunking, progressiveDisclosure, readingLevel, academicVocab, sentenceLimit, activeVoice })
     )
-    setSaved_(true)
-    setTimeout(() => setSaved_(false), 2000)
+    setIsSaved(true)
+    setTimeout(() => setIsSaved(false), 2000)
   }
 
   function handleReset(): void {
@@ -72,6 +73,8 @@ export default function ControlPanel(): React.ReactNode {
     setSentenceLimit(defaults.sentenceLimit)
     setActiveVoice(defaults.activeVoice)
     localStorage.removeItem(STORAGE_KEY)
+    setIsReset(true)
+    setTimeout(() => setIsReset(false), 2000)
   }
 
   return (
@@ -323,9 +326,18 @@ export default function ControlPanel(): React.ReactNode {
               )
             })()}
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleReset}>Reset to Defaults</Button>
+              <Button variant="outline" onClick={handleReset}>
+                {isReset ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Reset
+                  </>
+                ) : (
+                  'Reset to Defaults'
+                )}
+              </Button>
               <Button onClick={handleSave}>
-                {saved_ ? (
+                {isSaved ? (
                   <>
                     <Check className="h-4 w-4 mr-2" />
                     Saved
