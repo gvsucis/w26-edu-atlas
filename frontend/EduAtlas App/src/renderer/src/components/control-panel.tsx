@@ -107,9 +107,9 @@ export default function ControlPanel(): React.ReactNode {
                         <SelectValue placeholder="Select capacity" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="5">5 items (Lower cognitive capacity)</SelectItem>
+                        <SelectItem value="5">5 items (Beginner)</SelectItem>
                         <SelectItem value="7">7 items (Standard)</SelectItem>
-                        <SelectItem value="9">9 items (Advanced learners)</SelectItem>
+                        <SelectItem value="9">9 items (Advanced)</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
