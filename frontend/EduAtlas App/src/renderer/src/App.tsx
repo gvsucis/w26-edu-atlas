@@ -1,14 +1,38 @@
 import { useState } from 'react'
-import { Brain, LayoutDashboard, Settings, GraduationCap, Menu } from 'lucide-react'
+import { Brain, LayoutDashboard, Settings, GraduationCap, Menu, LogOut, User } from 'lucide-react'
 import { Button } from './components/button'
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from './components/sheet'
 import Dashboard from './components/dashboard'
 import ControlPanel from './components/control-panel'
+import Login, { type InstructorProfile } from './components/login'
 
 type View = 'dashboard' | 'control-panel'
 
+function loadProfile(): InstructorProfile | null {
+  try {
+    const raw = localStorage.getItem('eduatlas_user')
+    return raw ? (JSON.parse(raw) as InstructorProfile) : null
+  } catch {
+    return null
+  }
+}
+
 function App(): React.JSX.Element {
   const [currentView, setCurrentView] = useState<View>('dashboard')
+  const [profile, setProfile] = useState<InstructorProfile | null>(loadProfile)
+
+  function handleLogin(p: InstructorProfile): void {
+    setProfile(p)
+  }
+
+  function handleLogout(): void {
+    localStorage.removeItem('eduatlas_user')
+    setProfile(null)
+  }
+
+  if (!profile) {
+    return <Login onLogin={handleLogin} />
+  }
 
   const navItems: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
     { id: 'dashboard', label: 'Planning Dashboard', icon: LayoutDashboard },
@@ -51,6 +75,22 @@ function App(): React.JSX.Element {
                   </button>
                 )
               })}
+
+              <div className="flex items-center space-x-2 ml-4 pl-4 border-l border-white/20">
+                <div className="flex items-center space-x-1.5 text-sm text-blue-100">
+                  <User className="h-4 w-4" />
+                  <span className="font-medium text-white">{profile.fullName}</span>
+                  <span className="text-blue-300">&middot;</span>
+                  <span>{profile.school}</span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  title="Sign out"
+                  className="p-1.5 rounded-md text-blue-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
             </nav>
 
             <div className="md:hidden">
@@ -86,6 +126,20 @@ function App(): React.JSX.Element {
                         </button>
                       )
                     })}
+                    <div className="pt-4 border-t mt-2">
+                      <div className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600">
+                        <User className="h-4 w-4" />
+                        <span className="font-medium">{profile.fullName}</span>
+                      </div>
+                      <div className="px-3 pb-2 text-xs text-gray-400">{profile.school}</div>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center space-x-2 w-full px-3 py-2 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign out</span>
+                      </button>
+                    </div>
                   </nav>
                 </SheetContent>
               </Sheet>
