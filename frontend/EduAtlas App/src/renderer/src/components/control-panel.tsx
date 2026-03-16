@@ -308,10 +308,20 @@ export default function ControlPanel(): React.ReactNode {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm">All constraints active and enforced</span>
-            </div>
+            {(() => {
+              const activeCount = [autoChunking, progressiveDisclosure, academicVocab, sentenceLimit, activeVoice].filter(Boolean).length
+              const total = 5
+              const allActive = activeCount === total
+              const noneActive = activeCount === 0
+              return (
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full animate-pulse ${allActive ? 'bg-green-500' : noneActive ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                  <span className="text-sm">
+                    {allActive ? 'All constraints active and enforced' : noneActive ? 'No constraints active' : 'Some constraints active'}
+                  </span>
+                </div>
+              )
+            })()}
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handleReset}>Reset to Defaults</Button>
               <Button onClick={handleSave}>
