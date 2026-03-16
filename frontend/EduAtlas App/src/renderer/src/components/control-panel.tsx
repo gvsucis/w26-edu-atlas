@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Zap, Brain, Check } from 'lucide-react'
+import { ShieldCheck, Scale, Brain, Check } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './card'
 import { Button } from './button'
 import { Switch } from './switch'
@@ -86,13 +86,29 @@ export default function ControlPanel(): React.ReactNode {
         </p>
       </div>
 
-      <Alert>
-        <Zap className="h-4 w-4" />
-        <AlertTitle>AI System Active</AlertTitle>
-        <AlertDescription>
-          All constraints are being applied to AI outputs in real-time.
-        </AlertDescription>
-      </Alert>
+      <div className="grid sm:grid-cols-3 gap-3">
+        <Alert>
+          <ShieldCheck className="h-4 w-4" />
+          <AlertTitle>WCAG Level AA</AlertTitle>
+          <AlertDescription>
+            Output meets accessibility readability and contrast standards.
+          </AlertDescription>
+        </Alert>
+        <Alert>
+          <Scale className="h-4 w-4" />
+          <AlertTitle>Law & Guideline Compliant</AlertTitle>
+          <AlertDescription>
+            AI operates within FERPA, COPPA, and IDEA regulations.
+          </AlertDescription>
+        </Alert>
+        <Alert>
+          <Brain className="h-4 w-4" />
+          <AlertTitle>Designed for Students</AlertTitle>
+          <AlertDescription>
+            Every constraint is chosen to help students focus, understand, and remember.
+          </AlertDescription>
+        </Alert>
+      </div>
 
       <Tabs defaultValue="cognitive">
         <TabsList className="w-full grid grid-cols-2">
