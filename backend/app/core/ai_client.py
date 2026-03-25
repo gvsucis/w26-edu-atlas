@@ -13,7 +13,7 @@ rag_tool = types.Tool(
     retrieval=types.Retrieval(
         vertex_rag_store=types.VertexRagStore(
             rag_resources=[types.VertexRagStoreRagResource(rag_corpus=RAG_CORPUS)],
-            similarity_top_k=8,
+            similarity_top_k=5,
         )
     )
 )

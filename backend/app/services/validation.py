@@ -57,7 +57,7 @@ def check_constraints(output: str, plan_json: dict) -> dict:
     }
 
 
-# Use Gemini as an evaluator to score the generated output
+# Use Gemini as an evaluator, enforce JSON format 
 def judge_output(user_request: str, plan_json: dict, rag_pack: str, search_pack: str | None, output: str) -> dict:
     resp = client.models.generate_content(
         model=DEFAULT_MODEL,

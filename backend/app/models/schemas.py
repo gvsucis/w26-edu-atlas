@@ -1,5 +1,7 @@
 from google.genai import types
 from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import List, Optional, Literal
 
 # Uses google's types.Schema to structure Gemini I/O
 PLAN_SCHEMA = types.Schema(
@@ -47,8 +49,28 @@ EVAL_SCHEMA = types.Schema(
     ],
 )
 
+
+class LearningObjectiveInput(BaseModel):
+    bloom_level: str
+    text: str = Field(min_length=1)
+
+
 class GenerateRequest(BaseModel):
-    user_request: str
+    subject: str
+    grade: str
+    lesson_topic: str
+    duration_minutes: int
+    classroom_context: Optional[str] = ""
+    deliverable_type: Literal[
+        "Exam",
+        "Quiz",
+        "Homework",
+        "Lesson Plan",
+        "Activity",
+        "Worksheet"
+    ]
+    objectives: List[LearningObjectiveInput]
+
 
 class GenerateResponse(BaseModel):
     output: str
