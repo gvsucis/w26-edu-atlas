@@ -5,7 +5,6 @@ export interface LearningObjectiveInput {
 
 export interface GenerateRequest {
   subject: string
-  grade: string
   lesson_topic: string
   duration_minutes: number
   classroom_context: string

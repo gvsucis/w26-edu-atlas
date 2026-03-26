@@ -57,7 +57,6 @@ class LearningObjectiveInput(BaseModel):
 
 class GenerateRequest(BaseModel):
     subject: str
-    grade: str
     lesson_topic: str
     duration_minutes: int
     classroom_context: Optional[str] = ""

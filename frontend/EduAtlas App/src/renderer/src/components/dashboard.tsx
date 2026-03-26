@@ -42,7 +42,6 @@ interface ValidationState {
 
 export default function Dashboard(): React.ReactNode {
   const [subject, setSubject] = useState('Science')
-  const [gradeLevel, setGrade] = useState('')
   const [deliverableType, setDeliverableType] = useState('Lesson Plan')
   const [lessonTopic, setLessonTopic] = useState('')
   const [duration, setDuration] = useState(45)
@@ -121,7 +120,6 @@ export default function Dashboard(): React.ReactNode {
       const result = await generateContent({
         subject,
         lesson_topic: lessonTopic,
-        grade:gradeLevel,
         duration_minutes: duration,
         classroom_context: classroomContext,
         deliverable_type: deliverableType as
@@ -211,29 +209,6 @@ export default function Dashboard(): React.ReactNode {
                     </SelectContent>
                   </Select>
                 </div>
-              <div className="space-y-2">
-                <Label>Grade Level</Label>
-                <Select value={gradeLevel} onValueChange={setGrade}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select grade level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="K">K</SelectItem>
-                    <SelectItem value="1">1</SelectItem>
-                    <SelectItem value="2">2</SelectItem>
-                    <SelectItem value="3">3</SelectItem>
-                    <SelectItem value="4">4</SelectItem>
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="6">6</SelectItem>
-                    <SelectItem value="7">7</SelectItem>
-                    <SelectItem value="8">8</SelectItem>
-                    <SelectItem value="9">9</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="11">11</SelectItem>
-                    <SelectItem value="12">12</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="space-y-2">
                 <Label>Deliverable Type</Label>
                 <Select value={deliverableType} onValueChange={setDeliverableType}>

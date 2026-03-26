@@ -1,8 +1,5 @@
 from app.models.schemas import GenerateRequest
 
-
-
-
 # Build the generation prompt directly from structured frontend inputs
 def build_generation_prompt(req: GenerateRequest, rag_pack: str) -> str:
     objectives_text = "\n".join(
@@ -228,24 +225,24 @@ Additional formatting rules:
             """.strip()
 
 
-    return f"""
-Create a {req.deliverable_type.lower()} for the following classroom scenario.
+#     return f"""
+# Create a {req.deliverable_type.lower()} for the following classroom scenario.
 
-Subject: {req.subject}
-Lesson Topic: {req.lesson_topic}
-Duration: {req.duration_minutes} minutes
-Classroom Context: {req.classroom_context or 'None provided'}
+# Subject: {req.subject}
+# Lesson Topic: {req.lesson_topic}
+# Duration: {req.duration_minutes} minutes
+# Classroom Context: {req.classroom_context or 'None provided'}
 
-Learning Objectives:
-{objectives_text}
+# Learning Objectives:
+# {objectives_text}
 
-Use the following standards/context from the RAG corpus:
-{rag_pack}
+# Use the following standards/context from the RAG corpus:
+# {rag_pack}
 
-Requirements:
-- Align the deliverable to the lesson topic and objectives.
-- Use only the RAG pack for standards and official requirements.
-- Keep the content age-appropriate and classroom-ready.
-- If the deliverable is a quiz, exam, or homework, include an answer key.
-- If the deliverable is a lesson plan, include clear instructional structure.
-""".strip()
+# Requirements:
+# - Align the deliverable to the lesson topic and objectives.
+# - Use only the RAG pack for standards and official requirements.
+# - Keep the content age-appropriate and classroom-ready.
+# - If the deliverable is a quiz, exam, or homework, include an answer key.
+# - If the deliverable is a lesson plan, include clear instructional structure.
+# """.strip()
