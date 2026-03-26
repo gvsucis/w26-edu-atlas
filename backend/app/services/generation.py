@@ -1,9 +1,11 @@
-import json
 from app.core.ai_client import client
 from app.core.config import DEFAULT_MODEL
 
-
+# Generate the final educational artifact from the prepared prompt
 def generate_final(generation_prompt: str) -> str:
+    if not generation_prompt or not generation_prompt.strip():
+        raise ValueError("generate_final received an empty generation_prompt.")
+
     resp = client.models.generate_content(
         model=DEFAULT_MODEL,
         contents=generation_prompt,
@@ -17,12 +19,13 @@ def regenerate_with_feedback(
     previous_output: str,
     validation: dict,
 ) -> str:
-    feedback_parts = []
+    if not generation_prompt or not generation_prompt.strip():
+        raise ValueError("regenerate_with_feedback received an empty generation_prompt.")
 
-    if validation["grounding"]["ungrounded_codes"]:
-        feedback_parts.append(
-            f"These cited standards were not found in the RAG pack: {validation['grounding']['ungrounded_codes']}"
-        )
+    if not previous_output or not previous_output.strip():
+        raise ValueError("regenerate_with_feedback received an empty previous_output.")
+
+    feedback_parts = []
 
     if validation["constraints"]["missed"]:
         feedback_parts.append(
