@@ -3,6 +3,30 @@ from app.core.ai_client import client, rag_tool, search_tool
 from app.core.config import DEFAULT_MODEL
 from app.models.schemas import PLAN_SCHEMA
 from google.genai import types
+from app.models.schemas import GenerateRequest
+
+# Build RAG queries directly from structured frontend inputs
+def build_rag_queries(req: GenerateRequest) -> list[str]:
+    queries = [
+        f"{req.subject} {req.lesson_topic} standards",
+        f"{req.subject} {req.deliverable_type} standards",
+        f"{req.subject} curriculum standards",
+    ]
+
+    for obj in req.objectives[:3]:
+        queries.append(f"{req.subject} {obj.text} standards")
+
+    # Remove duplicates while preserving order
+    seen = set()
+    deduped = []
+    for q in queries:
+        key = q.strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            deduped.append(q)
+
+    return deduped
+
 
 # Convert user request into a filled PLAN_SCHEMA json
 def plan(user_request: str) -> dict:
