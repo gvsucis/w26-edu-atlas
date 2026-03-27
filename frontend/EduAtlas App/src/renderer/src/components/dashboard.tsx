@@ -41,8 +41,9 @@ interface ValidationState {
 }
 
 export default function Dashboard(): React.ReactNode {
-  const [subject, setSubject] = useState('Science')
-  const [deliverableType, setDeliverableType] = useState('Lesson Plan')
+  const [subject, setSubject] = useState('')
+  const [gradeBand, setGradeBand] = useState('')
+  const [deliverableType, setDeliverableType] = useState('')
   const [lessonTopic, setLessonTopic] = useState('')
   const [duration, setDuration] = useState(45)
   const [classroomContext, setClassroomContext] = useState('')
@@ -75,40 +76,6 @@ export default function Dashboard(): React.ReactNode {
     setObjectives(objectives.filter((obj) => obj.id !== id))
   }
 
-//   const buildUserRequest = (): string => {
-//     const formattedObjectives =
-//       objectives.length > 0
-//         ? objectives
-//             .map((obj, index) => `${index + 1}. [${obj.bloomLevel}] ${obj.text}`)
-//             .join('\n')
-//         : 'None provided'
-
-//     return `
-// Create instructional materials for the following classroom scenario.
-
-// Subject: ${subject}
-// Lesson Topic: ${lessonTopic}
-// Duration: ${duration} minutes
-// Classroom Context: ${classroomContext.trim() || 'None provided'}
-
-// Learning Objectives:
-// ${formattedObjectives}
-
-// Please generate appropriate instructional materials aligned to these objectives.
-// `.trim()
-//   }
-
-//   const inferMaterialType = (): 'Lesson Plan' | 'Assessment' | 'Activity' => {
-//     const topic = lessonTopic.toLowerCase()
-//     if (topic.includes('quiz') || topic.includes('test') || topic.includes('assessment')) {
-//       return 'Assessment'
-//     }
-//     if (topic.includes('activity') || topic.includes('lab') || topic.includes('project')) {
-//       return 'Activity'
-//     }
-//     return 'Lesson Plan'
-//   }
-
   const generateMaterials = async (): Promise<void> => {
     setIsGenerating(true)
     setError('')
@@ -116,14 +83,16 @@ export default function Dashboard(): React.ReactNode {
     setValidationState(null)
     setPlan(null)
 
+    // Pulls content from api, throws error if data doesn't match expected form
     try {
       const result = await generateContent({
         subject,
+        grade_band: gradeBand as 'K-2' | '3-5' | '6-8' | '9-12',
         lesson_topic: lessonTopic,
         duration_minutes: duration,
         classroom_context: classroomContext,
         deliverable_type: deliverableType as
-          | 'Exam'
+            'Exam'
           | 'Quiz'
           | 'Homework'
           | 'Lesson Plan'
@@ -206,6 +175,20 @@ export default function Dashboard(): React.ReactNode {
                       <SelectItem value="Theater">Theater</SelectItem>
                       <SelectItem value="Visual Arts">Visual Arts</SelectItem>
                       <SelectItem value="Dance">Dance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              <div className="space-y-2">
+                  <Label>Grade Band</Label>
+                  <Select value={gradeBand} onValueChange={setGradeBand}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select grade band" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="K-2">K-2</SelectItem>
+                      <SelectItem value="3-5">3-5</SelectItem>
+                      <SelectItem value="6-8">6-8</SelectItem>
+                      <SelectItem value="9-12">9-12</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

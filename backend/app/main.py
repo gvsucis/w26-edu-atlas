@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from app.routes.generate import router as generate_router
 
 app = FastAPI(title="EduAtlas Backend")
 
+# Block requests from different origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,4 +17,5 @@ app.add_middleware(
 def health():
     return {"ok": True}
 
+# Bring in generate endpoint
 app.include_router(generate_router)

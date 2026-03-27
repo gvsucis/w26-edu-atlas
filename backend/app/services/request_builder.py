@@ -1,6 +1,6 @@
 from app.models.schemas import GenerateRequest
 
-# Build hidden grounding block from structured standards
+# Grabs standards from retrieval and formats them for the report
 def build_standards_grounding_block(retrieval_result: dict) -> str:
     standards = retrieval_result.get("standards", [])
     if not standards:
@@ -27,8 +27,9 @@ def build_quiz_prompt(req: GenerateRequest, retrieval_result: dict) -> str:
     return f"""
 Create a student-facing quiz.
 
-Context:
+Context: {req.classroom_context}
 Subject: {req.subject}
+Grade Band: {req.grade_band}
 Topic: {req.lesson_topic}
 Duration: {req.duration_minutes} minutes
 Classroom Context: {req.classroom_context or "None provided"}
@@ -51,7 +52,7 @@ Requirements:
 - Do not duplicate numbering.
 
 Output format:
-TITLE
+Title
 
 Name: _________________________    Date: _________________________
 
@@ -87,8 +88,9 @@ def build_homework_prompt(req: GenerateRequest, retrieval_result: dict) -> str:
     return f"""
 Create a student-facing homework assignment.
 
-Context:
+Context: {req.classroom_context}
 Subject: {req.subject}
+Grade Band: {req.grade_band}
 Topic: {req.lesson_topic}
 Duration: {req.duration_minutes} minutes
 Classroom Context: {req.classroom_context or "None provided"}
@@ -111,7 +113,7 @@ Requirements:
 - Do not duplicate numbering.
 
 Output format:
-TITLE
+Title
 
 Name: _________________________    Date: _________________________
 
@@ -145,8 +147,9 @@ def build_lesson_plan_prompt(req: GenerateRequest, retrieval_result: dict) -> st
     return f"""
 Create a teacher-facing lesson plan.
 
-Context:
+Context: {req.classroom_context}
 Subject: {req.subject}
+Grade Band: {req.grade_band}
 Topic: {req.lesson_topic}
 Duration: {req.duration_minutes} minutes
 Classroom Context: {req.classroom_context or "None provided"}
@@ -166,7 +169,7 @@ Requirements:
 - Include differentiation when classroom context suggests it.
 
 Output format:
-TITLE
+Title
 
 Grade Level: __________
 Subject: __________
@@ -234,8 +237,9 @@ def build_generation_prompt(req: GenerateRequest, retrieval_result: dict) -> str
     return f"""
 Create a classroom-ready {req.deliverable_type.lower()}.
 
-Context:
+Context: {req.classroom_context}
 Subject: {req.subject}
+Grade Band: {req.grade_band}
 Topic: {req.lesson_topic}
 Duration: {req.duration_minutes} minutes
 Classroom Context: {req.classroom_context or "None provided"}

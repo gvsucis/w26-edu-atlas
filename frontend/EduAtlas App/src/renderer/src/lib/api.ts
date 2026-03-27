@@ -1,3 +1,5 @@
+// Backend communication layer
+// The interfaces are basically classes: they are the structure of the data that the frontend will use
 export interface LearningObjectiveInput {
   bloom_level: string
   text: string
@@ -5,6 +7,7 @@ export interface LearningObjectiveInput {
 
 export interface GenerateRequest {
   subject: string
+  grade_band: 'K-2' | '3-5' | '6-8' | '9-12'
   lesson_topic: string
   duration_minutes: number
   classroom_context: string
@@ -28,6 +31,7 @@ export interface GenerateResponse {
   }
 }
 
+// This is where the frontend recieves the generated payload
 export async function generateContent(payload: GenerateRequest): Promise<GenerateResponse> {
   const res = await fetch('http://127.0.0.1:8000/generate', {
     method: 'POST',

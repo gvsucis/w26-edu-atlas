@@ -30,6 +30,7 @@ def check_constraints(output: str, request_context: dict) -> dict:
         elif "standards" in c and "standard" not in output_lower:
             missed.append(constraint)
 
+    # Give a score from 0 to 1 for how many constraints are properly present
     score = (len(constraints) - len(missed)) / len(constraints) if constraints else 1.0
     return {
         "score": round(score, 3),
@@ -50,11 +51,24 @@ def judge_output(user_request: str, request_context: dict, retrieval_result: dic
             "- age_appropriateness_score must be a decimal from 0.0 to 1.0 only.\n"
             "- overall_score must be a decimal from 0.0 to 1.0 only.\n"
             "- Do not use a 1-5 scale.\n\n"
+            "Grounding guidance:\n"
+            "- grounding_score measures whether the generated content is consistent with and supported by the retrieved standards.\n"
+            "- Student-facing outputs do NOT need to visibly show standards codes or titles.\n"
+            "- Do NOT lower grounding_score simply because standards codes are hidden from the final deliverable.\n"
+            "- Judge grounding based on alignment of concepts, difficulty, tasks, and objectives to the retrieved standards.\n"
+            "- If the generated content clearly matches the retrieved standards, grounding_score should still be high even when no codes appear in the output.\n\n"
+            "Constraint guidance:\n"
+            "- constraint_score measures how well the output follows the requested deliverable type, answer key expectations, and other explicit requirements.\n\n"
+            "Age appropriateness guidance:\n"
+            "- age_appropriateness_score measures whether the language, difficulty, and task design fit the learner level implied by the request context.\n\n"
             f"REQUEST CONTEXT:\n{json.dumps(request_context, indent=2)}\n\n"
             f"RETRIEVED STANDARDS:\n{json.dumps(retrieval_result, indent=2)}\n\n"
             f"GENERATED OUTPUT:\n{output}\n\n"
-            "Judge whether the output is consistent with the retrieved standards, satisfies the request, "
-            "and is age-appropriate. Student-facing outputs do not need to visibly show standards codes."
+            "Evaluate whether the output:\n"
+            "1. aligns with the retrieved standards,\n"
+            "2. satisfies the requested deliverable and constraints,\n"
+            "3. is age-appropriate,\n"
+            "4. should be regenerated.\n"
         ),
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -84,9 +98,15 @@ def validate_output(
     constraints = check_constraints(output, request_context)
     judge = judge_output(user_request, request_context, retrieval_result, output)
 
+    # TODO: Format validation report
     return {
         "standards_used": standards_used,
         "explicit_codes_in_output": explicit_codes_in_output,
+        "grounding_note": (
+            "Standards are intentionally hidden from student-facing deliverables. "
+            "Use standards_used and judge.grounding_score as the real grounding indicators. "
+            "explicit_codes_in_output is diagnostic only."
+        ),
         "constraints": constraints,
         "judge": judge,
     }

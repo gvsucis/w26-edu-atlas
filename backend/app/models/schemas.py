@@ -1,13 +1,15 @@
 from google.genai import types
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field # Enforce data structures
 from typing import List, Optional, Literal
 
+# Turn raw JSON into a python object
 class LearningObjectiveInput(BaseModel):
     bloom_level: str
     text: str = Field(min_length=1)
 
 class GenerateRequest(BaseModel):
     subject: str
+    grade_band: Literal["K-2", "3-5", "6-8", "9-12"]
     lesson_topic: str
     duration_minutes: int
     classroom_context: Optional[str] = ""
@@ -21,6 +23,7 @@ class GenerateRequest(BaseModel):
     ]
     objectives: List[LearningObjectiveInput]
 
+# Structure eval output
 EVAL_SCHEMA = types.Schema(
     type="OBJECT",
     properties={
@@ -43,6 +46,7 @@ EVAL_SCHEMA = types.Schema(
     ],
 )
 
+# Structure standards output
 RETRIEVAL_SCHEMA = types.Schema(
     type="OBJECT",
     properties={

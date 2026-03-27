@@ -5,15 +5,30 @@ from app.services.request_builder import build_generation_prompt
 from app.services.generation import generate_final, regenerate_with_feedback
 from app.services.validation import validate_output
 
-# Main orchestration function using structured retrieval metadata
+# Will be used to determine if we should regenerate the content or not
+def passes_validation(validation: dict) -> bool:
+    constraint_score = validation.get("constraints", {}).get("score", 0.0)
+    overall_score = validation.get("judge", {}).get("overall_score", 0.0)
+    should_regenerate = validation.get("judge", {}).get("should_regenerate", True)
+
+    return not (
+        constraint_score < 0.8
+        or overall_score < 0.75
+        or should_regenerate
+    )
+
+
+# Main orchestration function using structured retrieval data
 def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
     rag_queries = build_rag_queries(req)
 
+    # debug, remove in final product
     print("\nRAG QUERIES")
     print(json.dumps(rag_queries, indent=2))
 
     retrieval_result = retrieve(rag_queries)
 
+    # debug, remove in final product
     print("\nRETRIEVAL RESULT")
     print(json.dumps(retrieval_result, indent=2)[:1500])
 
@@ -21,6 +36,7 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
 
     request_context = {
         "subject": req.subject,
+        "grade_band": req.grade_band,
         "lesson_topic": req.lesson_topic,
         "deliverable_type": req.deliverable_type,
         "duration_minutes": req.duration_minutes,
@@ -33,13 +49,8 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
         ),
     }
 
-    def passes_validation(validation: dict) -> bool:
-        return not (
-            validation["constraints"]["score"] < 0.8
-            or validation["judge"]["overall_score"] < 0.75
-            or validation["judge"]["should_regenerate"]
-        )
 
+    # Validation pipeline
     current_output = generate_final(generation_prompt)
     current_validation = validate_output(
         user_request=generation_prompt,

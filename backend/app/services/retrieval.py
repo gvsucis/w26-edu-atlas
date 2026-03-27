@@ -7,13 +7,13 @@ from app.models.schemas import GenerateRequest, RETRIEVAL_SCHEMA
 # Build RAG queries directly from structured frontend inputs
 def build_rag_queries(req: GenerateRequest) -> list[str]:
     queries = [
-        f"{req.subject} {req.lesson_topic} standards",
-        f"{req.subject} {req.deliverable_type} standards",
-        f"{req.subject} curriculum standards",
+        f"{req.grade_band} {req.subject} {req.lesson_topic} standards",
+        f"{req.grade_band} {req.subject} {req.deliverable_type} standards",
+        f"{req.grade_band} {req.subject} curriculum standards",
     ]
 
     for obj in req.objectives[:3]:
-        queries.append(f"{req.subject} {obj.text} standards")
+        queries.append(f"{req.grade_band} {req.subject} {obj.text} standards")
 
     seen = set()
     deduped = []
@@ -27,7 +27,7 @@ def build_rag_queries(req: GenerateRequest) -> list[str]:
     return deduped
 
 
-# Retrieve structured standards from the RAG corpus
+# Use structued queries to retrieve RAG entries
 def retrieve(rag_queries: list[str]) -> dict:
     q = "\n".join(f"- {x}" for x in rag_queries)
 
