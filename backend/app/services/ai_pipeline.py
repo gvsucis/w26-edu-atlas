@@ -1,97 +1,130 @@
 import json
-from app.services.retrieval import plan, retrieve, web_search_context
+from app.models.schemas import GenerateRequest
+from app.services.retrieval import retrieve, build_rag_queries
+from app.services.request_builder import build_generation_prompt
 from app.services.generation import generate_final, regenerate_with_feedback
 from app.services.validation import validate_output
 
-# Main orchestration function that runs planning, retrieval, search, generation, and validation
-import json
-from app.services.retrieval import plan, retrieve, web_search_context
-from app.services.generation import generate_final, regenerate_with_feedback
-from app.services.validation import validate_output
+# Will be used to determine if we should regenerate the content or not
+def passes_validation(validation: dict) -> bool:
+    constraint_score = validation.get("constraints", {}).get("score", 0.0)
+    overall_score = validation.get("judge", {}).get("overall_score", 0.0)
+    should_regenerate = validation.get("judge", {}).get("should_regenerate", True)
+
+    return not (
+        constraint_score < 0.8
+        or overall_score < 0.75
+        or should_regenerate
+    )
 
 
-# Main orchestration function with sequential regeneration attempts
-def run_pipeline(user_request: str, max_attempts: int = 3) -> dict:
-    plan_json = plan(user_request)
-    rag_pack = retrieve(plan_json["rag_queries"]) if plan_json.get("standards_needed", True) else ""
-    search_pack = web_search_context(user_request, plan_json) if plan_json.get("needs_web_search", False) else None
+# Main orchestration function using structured retrieval data
+def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
+    rag_queries = build_rag_queries(req)
 
-    def passes_validation(validation: dict) -> bool:
-        return not (
-            validation["grounding"]["score"] < 0.8
-            or validation["constraints"]["score"] < 0.8
-            or validation["judge"]["overall_score"] < 0.75
-            or validation["judge"]["should_regenerate"]
-        )
+    # debug, remove in final product
+    print("\nRAG QUERIES")
+    print(json.dumps(rag_queries, indent=2))
 
-    # First generation attempt
-    current_output = generate_final(user_request, plan_json, rag_pack, search_pack)
-    current_validation = validate_output(user_request, plan_json, rag_pack, search_pack, current_output)
+    retrieval_result = retrieve(rag_queries)
+
+    # debug, remove in final product
+    print("\nRETRIEVAL RESULT")
+    print(json.dumps(retrieval_result, indent=2)[:1500])
+
+    generation_prompt = build_generation_prompt(req, retrieval_result)
+
+    request_context = {
+        "subject": req.subject,
+        "grade_band": req.grade_band,
+        "lesson_topic": req.lesson_topic,
+        "deliverable_type": req.deliverable_type,
+        "duration_minutes": req.duration_minutes,
+        "classroom_context": req.classroom_context,
+        "objectives": [obj.model_dump() for obj in req.objectives],
+        "generation_constraints": (
+            ["include answer key"]
+            if req.deliverable_type in {"Quiz", "Exam", "Homework", "Worksheet"}
+            else []
+        ),
+    }
+
+
+    # Validation pipeline
+    current_output = generate_final(generation_prompt)
+    current_validation = validate_output(
+        user_request=generation_prompt,
+        request_context=request_context,
+        retrieval_result=retrieval_result,
+        output=current_output,
+    )
 
     print("\nATTEMPT 1 VALIDATION")
     print(json.dumps(current_validation, indent=2))
 
     if passes_validation(current_validation):
-        print("\nGeneration passed validation on attempt 1.")
         return {
-            "output": current_output,
-            "validation": current_validation,
-            "plan": plan_json,
-            "success": True,
-            "attempts_used": 1,
+            "deliverable": {
+                "content": current_output,
+                "type": req.deliverable_type,
+            },
+            "validation": {
+                "report": current_validation,
+                "success": True,
+                "attempts_used": 1,
+            },
+            "metadata": {
+                "rag_queries": rag_queries,
+            },
         }
 
-    # Retry only if validation failed
     for attempt in range(2, max_attempts + 1):
         print(f"\nAttempt {attempt - 1} failed validation. Regenerating (attempt {attempt})...\n")
 
         current_output = regenerate_with_feedback(
-            user_request=user_request,
-            plan_json=plan_json,
-            rag_pack=rag_pack,
-            search_pack=search_pack,
+            generation_prompt=generation_prompt,
             previous_output=current_output,
             validation=current_validation,
         )
 
         current_validation = validate_output(
-            user_request,
-            plan_json,
-            rag_pack,
-            search_pack,
-            current_output
+            user_request=generation_prompt,
+            request_context=request_context,
+            retrieval_result=retrieval_result,
+            output=current_output,
         )
 
         print(f"\nATTEMPT {attempt} VALIDATION")
         print(json.dumps(current_validation, indent=2))
 
         if passes_validation(current_validation):
-            print(f"\nGeneration passed validation on attempt {attempt}.")
             return {
                 "deliverable": {
                     "content": current_output,
-                    "type": plan_json.get("deliverable_type"),
+                    "type": req.deliverable_type,
                 },
                 "validation": {
                     "report": current_validation,
                     "success": True,
                     "attempts_used": attempt,
                 },
-                "plan": plan_json,
+                "metadata": {
+                    "rag_queries": rag_queries,
+                },
             }
 
-    print(f"\nGeneration failed validation after {max_attempts} total attempts.")
-
     return {
-    "deliverable": {
-        "content": current_output,
-        "type": plan_json.get("deliverable_type"),
-    },
-    "validation": {
-        "report": current_validation,
-        "success": False,
-        "attempts_used": max_attempts,
-        "message": f"Generation failed validation after {max_attempts} attempts.",
-    },
-    "plan": plan_json,
+        "deliverable": {
+            "content": current_output,
+            "type": req.deliverable_type,
+        },
+        "validation": {
+            "report": current_validation,
+            "success": False,
+            "attempts_used": max_attempts,
+            "message": f"Generation failed validation after {max_attempts} attempts.",
+        },
+        "metadata": {
+            "rag_queries": rag_queries,
+        },
     }
