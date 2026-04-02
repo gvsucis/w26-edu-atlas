@@ -18,25 +18,23 @@ def passes_validation(validation: dict) -> bool:
     )
 
 
-# Main orchestration function using structured retrieval data
+# Main orchestration function using structured retrieval metadata
 def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
     rag_queries = build_rag_queries(req)
 
-    # debug, remove in final product
     print("\nRAG QUERIES")
     print(json.dumps(rag_queries, indent=2))
 
     retrieval_result = retrieve(rag_queries)
 
-    # debug, remove in final product
     print("\nRETRIEVAL RESULT")
     print(json.dumps(retrieval_result, indent=2)[:1500])
 
     generation_prompt = build_generation_prompt(req, retrieval_result)
 
     request_context = {
-        "subject": req.subject,
         "grade_band": req.grade_band,
+        "subject": req.subject,
         "lesson_topic": req.lesson_topic,
         "deliverable_type": req.deliverable_type,
         "duration_minutes": req.duration_minutes,
@@ -49,8 +47,6 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
         ),
     }
 
-
-    # Validation pipeline
     current_output = generate_final(generation_prompt)
     current_validation = validate_output(
         user_request=generation_prompt,
@@ -60,7 +56,7 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
     )
 
     print("\nATTEMPT 1 VALIDATION")
-    print(json.dumps(current_validation, indent=2))
+    print(current_validation["report"])
 
     if passes_validation(current_validation):
         return {
@@ -69,7 +65,8 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
                 "type": req.deliverable_type,
             },
             "validation": {
-                "report": current_validation,
+                "report": current_validation["report"],
+                "raw": current_validation,
                 "success": True,
                 "attempts_used": 1,
             },
@@ -95,7 +92,7 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
         )
 
         print(f"\nATTEMPT {attempt} VALIDATION")
-        print(json.dumps(current_validation, indent=2))
+        print(current_validation["report"])
 
         if passes_validation(current_validation):
             return {
@@ -104,7 +101,8 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
                     "type": req.deliverable_type,
                 },
                 "validation": {
-                    "report": current_validation,
+                    "report": current_validation["report"],
+                    "raw": current_validation,
                     "success": True,
                     "attempts_used": attempt,
                 },
@@ -119,7 +117,8 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
             "type": req.deliverable_type,
         },
         "validation": {
-            "report": current_validation,
+            "report": current_validation["report"],
+            "raw": current_validation,
             "success": False,
             "attempts_used": max_attempts,
             "message": f"Generation failed validation after {max_attempts} attempts.",

@@ -21,7 +21,8 @@ export interface GenerateResponse {
     type?: string
   }
   validation: {
-    report: Record<string, unknown>
+    report: string
+    raw?: Record<string, unknown>
     success: boolean
     attempts_used: number
     message?: string

@@ -34,7 +34,8 @@ interface GeneratedMaterial {
 }
 
 interface ValidationState {
-  report: Record<string, unknown> | null
+  report: string
+  raw?: Record<string, unknown>
   success: boolean
   attempts_used: number
   message?: string
@@ -108,7 +109,8 @@ export default function Dashboard(): React.ReactNode {
       setPlan(result.metadata?.plan ?? null)
 
       setValidationState({
-        report: result.validation.report ?? null,
+        report: result.validation.report ?? '',
+        raw: result.validation.raw ?? undefined,
         success: result.validation.success,
         attempts_used: result.validation.attempts_used,
         message: result.validation.message
@@ -386,8 +388,15 @@ export default function Dashboard(): React.ReactNode {
                   )}
 
                   <div className="rounded-lg border bg-muted/30 p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-semibold">Validation Report</h3>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date().toISOString().split('T')[0]}
+                      </span>
+                    </div>
+
                     <pre className="whitespace-pre-wrap text-xs font-sans">
-                      {JSON.stringify(validationState.report, null, 2)}
+                      {validationState.report}
                     </pre>
                   </div>
                 </div>

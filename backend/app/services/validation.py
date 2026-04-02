@@ -4,6 +4,8 @@ from google.genai import types
 from app.core.ai_client import client
 from app.core.config import DEFAULT_MODEL
 from app.models.schemas import EVAL_SCHEMA
+from datetime import datetime
+
 
 # Extract standards-like codes from visible output text for diagnostics only
 def extract_standard_codes(text: str) -> list[str]:
@@ -15,7 +17,11 @@ def extract_standard_codes(text: str) -> list[str]:
 def check_constraints(output: str, request_context: dict) -> dict:
     constraints = request_context.get("generation_constraints", [])
     if not constraints:
-        return {"score": 1.0, "missed": []}
+        return {
+            "score": 1.0,
+            "missed": [],
+            "used": [],
+        }
 
     output_lower = output.lower()
     missed = []
@@ -30,11 +36,12 @@ def check_constraints(output: str, request_context: dict) -> dict:
         elif "standards" in c and "standard" not in output_lower:
             missed.append(constraint)
 
-    # Give a score from 0 to 1 for how many constraints are properly present
     score = (len(constraints) - len(missed)) / len(constraints) if constraints else 1.0
+
     return {
         "score": round(score, 3),
         "missed": missed,
+        "used": constraints,
     }
 
 
@@ -61,6 +68,7 @@ def judge_output(user_request: str, request_context: dict, retrieval_result: dic
             "- constraint_score measures how well the output follows the requested deliverable type, answer key expectations, and other explicit requirements.\n\n"
             "Age appropriateness guidance:\n"
             "- age_appropriateness_score measures whether the language, difficulty, and task design fit the learner level implied by the request context.\n\n"
+            f"USER REQUEST:\n{user_request}\n\n"
             f"REQUEST CONTEXT:\n{json.dumps(request_context, indent=2)}\n\n"
             f"RETRIEVED STANDARDS:\n{json.dumps(retrieval_result, indent=2)}\n\n"
             f"GENERATED OUTPUT:\n{output}\n\n"
@@ -79,6 +87,62 @@ def judge_output(user_request: str, request_context: dict, retrieval_result: dic
     return json.loads(resp.text)
 
 
+# Format the validation dict into your pretty report string
+def format_validation_report(validation: dict, request_context: dict) -> str:
+    date = datetime.today().strftime('%Y-%m-%d')
+
+    standards_used = validation.get("standards_used", [])
+    explicit_codes_in_output = validation.get("explicit_codes_in_output", [])
+    constraints = validation.get("constraints", {})
+    judge = validation.get("judge", {})
+
+    standards_block = "\n".join(standards_used) if standards_used else "No standards used"
+    visible_codes_block = "\n".join(explicit_codes_in_output) if explicit_codes_in_output else "No visible codes in output"
+    constraints_used_block = "\n".join(constraints.get("used", [])) if constraints.get("used") else "No constraints used"
+    constraints_missed_block = "\n".join(constraints.get("missed", [])) if constraints.get("missed") else "No constraints missed"
+
+    issues = judge.get("issues", [])
+    issues_block = "\n".join(issues) if issues else "No issues to report"
+
+    return f"""
+
+{request_context["subject"]} {request_context["deliverable_type"]} for grades {request_context["grade_band"]}
+
+
+Standards Used
+
+{standards_block}
+
+
+Visible Codes in Output
+
+{visible_codes_block}
+
+
+Constraints Used
+
+{constraints_used_block}
+
+
+Constraints Missed
+
+{constraints_missed_block}
+
+
+Final Validation Scores (0 = Worst, 1 = Best)
+
+Structure OK: {judge.get("structure_ok")}
+Standards Grounding Score: {judge.get("grounding_score")}
+Constraints Score: {constraints.get("score")}
+Age-Appropriateness Score: {judge.get("age_appropriateness_score")}
+
+Issues
+{issues_block}
+
+FINAL SCORE: {judge.get("overall_score")}
+    """.strip()
+
+
 # Run all validation checks and combine results into a report
 def validate_output(
     user_request: str,
@@ -87,10 +151,7 @@ def validate_output(
     output: str,
 ) -> dict:
     standards_used = [
-        {
-            "code": std["code"],
-            "title": std["title"],
-        }
+        f"Code {std['code']}: {std['title']}"
         for std in retrieval_result.get("standards", [])
     ]
 
@@ -98,15 +159,12 @@ def validate_output(
     constraints = check_constraints(output, request_context)
     judge = judge_output(user_request, request_context, retrieval_result, output)
 
-    # TODO: Format validation report
-    return {
+    validation = {
         "standards_used": standards_used,
         "explicit_codes_in_output": explicit_codes_in_output,
-        "grounding_note": (
-            "Standards are intentionally hidden from student-facing deliverables. "
-            "Use standards_used and judge.grounding_score as the real grounding indicators. "
-            "explicit_codes_in_output is diagnostic only."
-        ),
         "constraints": constraints,
         "judge": judge,
     }
+
+    validation["report"] = format_validation_report(validation, request_context)
+    return validation
