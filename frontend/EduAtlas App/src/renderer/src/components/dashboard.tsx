@@ -8,7 +8,9 @@ import {
   Plus,
   Trash2,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Clock,
+  ChevronRight
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './card'
 import { Button } from './button'
@@ -492,6 +494,29 @@ export default function Dashboard(): React.ReactNode {
                     </div>
                   </>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                History Log
+              </CardTitle>
+              <CardDescription>Recently generated materials</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
+                  <Clock className="h-8 w-8 mb-2 opacity-40" />
+                  <p className="text-sm">No generated materials yet</p>
+                </div>
+                <Separator />
+                <button className="flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer mx-auto">
+                  <span>View all generated materials</span>
+                  <ChevronRight className="h-3 w-3" />
+                </button>
               </div>
             </CardContent>
           </Card>
