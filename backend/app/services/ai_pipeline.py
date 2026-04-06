@@ -59,9 +59,28 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
         ),
     }
 
+    objective_parts = []
+    for obj in request_context["objectives"]:
+        if isinstance(obj, dict):
+            desc = obj.get("description")
+            if isinstance(desc, str):
+                objective_parts.append(desc)
+            else:
+                objective_parts.append(str(obj))
+        else:
+            objective_parts.append(str(obj))
+
+    # A simplified version of the request to cut down on string length
+    user_request = (
+        f"Create a {req.deliverable_type} for {req.grade_band} {req.subject} "
+        f"about '{req.lesson_topic}' for {req.duration_minutes} minutes. "
+        f"Classroom context: {req.classroom_context}. "
+        f"Objectives: {'; '.join(objective_parts)}."
+    )
+
     current_output = generate_final(generation_prompt)
     current_validation = validate_output(
-        user_request=generation_prompt,
+        user_request,
         request_context=request_context,
         retrieval_result=retrieval_result,
         output=current_output,
@@ -98,7 +117,7 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
         )
 
         current_validation = validate_output(
-            user_request=generation_prompt,
+            user_request,
             request_context=request_context,
             retrieval_result=retrieval_result,
             output=current_output,
