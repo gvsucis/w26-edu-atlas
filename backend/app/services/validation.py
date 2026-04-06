@@ -4,7 +4,6 @@ from google.genai import types
 from app.core.ai_client import client
 from app.core.config import DEFAULT_MODEL
 from app.models.schemas import EVAL_SCHEMA
-from datetime import datetime
 
 
 # Extract standards-like codes from visible output text for diagnostics only
@@ -45,6 +44,20 @@ def check_constraints(output: str, request_context: dict) -> dict:
     }
 
 
+# Decide whether the expensive LLM judge is needed
+def should_run_judge(request_context: dict, constraints: dict, force: bool = False) -> bool:
+    if force:
+        return True
+
+    if constraints.get("missed"):
+        return True
+
+    if request_context.get("deliverable_type") in {"Lesson Plan", "Activity", "Exam"}:
+        return True
+
+    return False
+
+
 # Use Gemini as an evaluator to score the generated output
 def judge_output(user_request: str, request_context: dict, retrieval_result: dict, output: str) -> dict:
     resp = client.models.generate_content(
@@ -64,19 +77,10 @@ def judge_output(user_request: str, request_context: dict, retrieval_result: dic
             "- Do NOT lower grounding_score simply because standards codes are hidden from the final deliverable.\n"
             "- Judge grounding based on alignment of concepts, difficulty, tasks, and objectives to the retrieved standards.\n"
             "- If the generated content clearly matches the retrieved standards, grounding_score should still be high even when no codes appear in the output.\n\n"
-            "Constraint guidance:\n"
-            "- constraint_score measures how well the output follows the requested deliverable type, answer key expectations, and other explicit requirements.\n\n"
-            "Age appropriateness guidance:\n"
-            "- age_appropriateness_score measures whether the language, difficulty, and task design fit the learner level implied by the request context.\n\n"
             f"USER REQUEST:\n{user_request}\n\n"
             f"REQUEST CONTEXT:\n{json.dumps(request_context, indent=2)}\n\n"
             f"RETRIEVED STANDARDS:\n{json.dumps(retrieval_result, indent=2)}\n\n"
             f"GENERATED OUTPUT:\n{output}\n\n"
-            "Evaluate whether the output:\n"
-            "1. aligns with the retrieved standards,\n"
-            "2. satisfies the requested deliverable and constraints,\n"
-            "3. is age-appropriate,\n"
-            "4. should be regenerated.\n"
         ),
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -87,10 +91,25 @@ def judge_output(user_request: str, request_context: dict, retrieval_result: dic
     return json.loads(resp.text)
 
 
+# Cheap fallback judge when full LLM judging is skipped
+def build_fast_judge(constraints: dict) -> dict:
+    constraint_score = constraints.get("score", 1.0)
+    overall_score = constraint_score
+
+    return {
+        "structure_ok": True,
+        "grounding_score": 1.0,
+        "constraint_score": constraint_score,
+        "age_appropriateness_score": 1.0,
+        "overall_score": overall_score,
+        "issues": [],
+        "should_regenerate": constraint_score < 0.8,
+        "judge_mode": "fast",
+    }
+
+
 # Format the validation dict into your pretty report string
 def format_validation_report(validation: dict, request_context: dict) -> str:
-    date = datetime.today().strftime('%Y-%m-%d')
-
     standards_used = validation.get("standards_used", [])
     explicit_codes_in_output = validation.get("explicit_codes_in_output", [])
     constraints = validation.get("constraints", {})
@@ -105,29 +124,23 @@ def format_validation_report(validation: dict, request_context: dict) -> str:
     issues_block = "\n".join(issues) if issues else "No issues to report"
 
     return f"""
-
 {request_context["subject"]} {request_context["deliverable_type"]} for grades {request_context["grade_band"]}
-
 
 Standards Used
 
 {standards_block}
 
-
 Visible Codes in Output
 
 {visible_codes_block}
-
 
 Constraints Used
 
 {constraints_used_block}
 
-
 Constraints Missed
 
 {constraints_missed_block}
-
 
 Final Validation Scores (0 = Worst, 1 = Best)
 
@@ -140,7 +153,7 @@ Issues
 {issues_block}
 
 FINAL SCORE: {judge.get("overall_score")}
-    """.strip()
+""".strip()
 
 
 # Run all validation checks and combine results into a report
@@ -149,6 +162,7 @@ def validate_output(
     request_context: dict,
     retrieval_result: dict,
     output: str,
+    force_judge: bool = False,
 ) -> dict:
     standards_used = [
         f"Code {std['code']}: {std['title']}"
@@ -157,7 +171,12 @@ def validate_output(
 
     explicit_codes_in_output = extract_standard_codes(output)
     constraints = check_constraints(output, request_context)
-    judge = judge_output(user_request, request_context, retrieval_result, output)
+
+    if should_run_judge(request_context, constraints, force=force_judge):
+        judge = judge_output(user_request, request_context, retrieval_result, output)
+        judge["judge_mode"] = "llm"
+    else:
+        judge = build_fast_judge(constraints)
 
     validation = {
         "standards_used": standards_used,

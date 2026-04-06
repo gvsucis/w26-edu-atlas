@@ -7,10 +7,22 @@ from app.services.validation import validate_output
 
 # Will be used to determine if we should regenerate the content or not
 def passes_validation(validation: dict) -> bool:
-    constraint_score = validation.get("constraints", {}).get("score", 0.0)
-    overall_score = validation.get("judge", {}).get("overall_score", 0.0)
-    should_regenerate = validation.get("judge", {}).get("should_regenerate", True)
+    constraints = validation.get("constraints", {})
+    judge = validation.get("judge", {})
 
+    constraint_score = constraints.get("score", 0.0)
+    overall_score = judge.get("overall_score", 0.0)
+    should_regenerate = judge.get("should_regenerate", True)
+    judge_mode = judge.get("judge_mode", "llm")
+
+    # If we used the cheap validator, trust constraints + cheap regeneration signal
+    if judge_mode == "fast":
+        return not (
+            constraint_score < 0.8
+            or should_regenerate
+        )
+
+    # If we used the full LLM judge, also require overall score
     return not (
         constraint_score < 0.8
         or overall_score < 0.75
@@ -53,6 +65,7 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
         request_context=request_context,
         retrieval_result=retrieval_result,
         output=current_output,
+        force_judge=False,
     )
 
     print("\nATTEMPT 1 VALIDATION")
@@ -89,6 +102,7 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
             request_context=request_context,
             retrieval_result=retrieval_result,
             output=current_output,
+            force_judge=True,
         )
 
         print(f"\nATTEMPT {attempt} VALIDATION")
