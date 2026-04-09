@@ -1,6 +1,12 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { startGoogleOAuth } from './googleAuth'
+
+ipcMain.handle('google-auth', async () => {
+  return await startGoogleOAuth()
+})
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({

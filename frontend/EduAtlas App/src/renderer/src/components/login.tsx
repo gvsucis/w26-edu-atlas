@@ -35,6 +35,26 @@ export default function Login({ onLogin }: LoginProps): React.JSX.Element {
     onLogin(profile)
   }
 
+  const handleGoogleLogin = async () => {
+    try {
+      const tokens = await window.api.googleAuth()
+
+      console.log('OAuth success:', tokens)
+
+      // TEMP profile (we’ll replace with real data later)
+      const profile: InstructorProfile = {
+        fullName: 'Google User',
+        school: 'Connected via Google'
+      }
+
+      localStorage.setItem('eduatlas_user', JSON.stringify(profile))
+      onLogin(profile)
+
+    } catch (err) {
+      console.error('Google login failed', err)
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
       <header className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg">
@@ -68,7 +88,20 @@ export default function Login({ onLogin }: LoginProps): React.JSX.Element {
               <CardTitle className="text-base text-gray-700">Instructor Profile</CardTitle>
               <CardDescription>Used to personalise your experience</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-5">
+              <Button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              >
+                Continue with Google
+              </Button>
+
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span>or</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
               <form onSubmit={handleSubmit} noValidate className="space-y-5">
                 <div className="space-y-1.5">
                   <Label htmlFor="fullName" className="flex items-center gap-1.5">

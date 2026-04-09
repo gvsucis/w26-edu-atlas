@@ -3,7 +3,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  checkHealth: (): Promise<boolean> => ipcRenderer.invoke('health-check')
+  checkHealth: (): Promise<boolean> => ipcRenderer.invoke('health-check'),
+  googleAuth: () => ipcRenderer.invoke('google-auth')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

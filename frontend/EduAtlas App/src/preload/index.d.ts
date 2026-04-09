@@ -5,6 +5,7 @@ declare global {
     electron: ElectronAPI
     api: {
       checkHealth: () => Promise<boolean>
+      googleAuth: () => Promise<any>
     }
   }
 }
