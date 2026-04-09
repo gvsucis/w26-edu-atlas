@@ -13,6 +13,7 @@ export interface GenerateRequest {
   classroom_context: string
   deliverable_type: 'Exam' | 'Quiz' | 'Homework' | 'Lesson Plan' | 'Activity' | 'Worksheet'
   objectives: LearningObjectiveInput[]
+  use_web_search: boolean
 }
 
 export interface GenerateResponse {

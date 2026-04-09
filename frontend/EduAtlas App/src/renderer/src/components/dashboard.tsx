@@ -21,6 +21,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { Badge } from './badge'
 import { Separator } from './separator'
 import { generateContent } from '../lib/api'
+import { Switch } from './switch'
 
 interface LearningObjective {
   id: number
@@ -50,6 +51,7 @@ export default function Dashboard(): React.ReactNode {
   const [lessonTopic, setLessonTopic] = useState('')
   const [duration, setDuration] = useState(45)
   const [classroomContext, setClassroomContext] = useState('')
+  const [useWebSearch, setUseWebSearch] = useState(false)
   const [objectives, setObjectives] = useState<LearningObjective[]>([])
   const [newBloomLevel, setNewBloomLevel] = useState('Remember')
   const [newObjectiveText, setNewObjectiveText] = useState('')
@@ -86,7 +88,7 @@ export default function Dashboard(): React.ReactNode {
     setValidationState(null)
     setPlan(null)
 
-    // Pulls content from api, throws error if data doesn't match expected form
+    // Backend payload - Pulls content from api, throws error if data doesn't match expected form
     try {
       const result = await generateContent({
         subject,
@@ -104,7 +106,8 @@ export default function Dashboard(): React.ReactNode {
         objectives: objectives.map((obj) => ({
           bloom_level: obj.bloomLevel,
           text: obj.text
-        }))
+        })),
+        use_web_search: useWebSearch
       })
 
       setGeneratedText(result.deliverable.content)
@@ -240,6 +243,22 @@ export default function Dashboard(): React.ReactNode {
                     placeholder="Describe any specific classroom needs, accommodations, or contextual information..."
                   />
                 </div>
+              
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <Label>Use Web Search</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Needed for current events, real-world context etc.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={useWebSearch}
+                    onCheckedChange={setUseWebSearch}
+                  />
+                </div>
+              </div>
+
               </div>
             </CardContent>
           </Card>
