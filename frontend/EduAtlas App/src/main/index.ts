@@ -2,10 +2,8 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { startGoogleOAuth } from './googleAuth'
+import { saveContentAsGoogleDoc } from './googleDocs'
 
-ipcMain.handle('google-auth', async () => {
-  return await startGoogleOAuth()
-})
 
 function createWindow(): void {
   // Create the browser window.
@@ -53,7 +51,7 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  ipcMain.handle('health-check', async () => {
+  ipcMain.handle('check-health', async () => {
     try {
       const res = await fetch('http://127.0.0.1:8000/health')
       return res.ok
@@ -82,3 +80,14 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
+ipcMain.handle('google-auth', async () => {
+  return await startGoogleOAuth()
+})
+
+ipcMain.handle(
+  'google-save-doc',
+  async (_event, payload: { title: string; content: string }) => {
+    return await saveContentAsGoogleDoc(payload)
+  }
+)

@@ -63,6 +63,10 @@ export default function Dashboard(): React.ReactNode {
   const [error, setError] = useState('')
   const [plan, setPlan] = useState<Record<string, unknown> | null>(null)
 
+  const [isSavingToGoogle, setIsSavingToGoogle] = useState(false)
+  const [googleDocUrl, setGoogleDocUrl] = useState('')
+  const [googleSaveMessage, setGoogleSaveMessage] = useState('')
+
   const addObjective = (): void => {
     if (newObjectiveText.trim() === '') return
 
@@ -87,6 +91,8 @@ export default function Dashboard(): React.ReactNode {
     setGeneratedText('')
     setValidationState(null)
     setPlan(null)
+    setGoogleDocUrl('')
+    setGoogleSaveMessage('')
 
     // Backend payload - Pulls content from api, throws error if data doesn't match expected form
     try {
@@ -140,6 +146,37 @@ export default function Dashboard(): React.ReactNode {
       setMaterials([])
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const handleSaveToGoogleDoc = async (): Promise<void> => {
+    if (!generatedText.trim()) {
+      setGoogleSaveMessage('No generated content is available to save.')
+      return
+    }
+
+    try {
+      setIsSavingToGoogle(true)
+      setGoogleSaveMessage('')
+
+      const trimmedTopic = lessonTopic.trim() || 'Untitled'
+      const trimmedType = deliverableType || 'Material'
+      const title = `EduAtlas - ${trimmedTopic} ${trimmedType}`
+
+      const result = await window.api.saveGoogleDoc({
+        title,
+        content: generatedText
+      })
+
+      setGoogleDocUrl(result.url)
+      setGoogleSaveMessage('Saved to Google Drive successfully.')
+    } catch (err) {
+      console.error(err)
+      setGoogleSaveMessage(
+        err instanceof Error ? err.message : 'Failed to save to Google Drive.'
+      )
+    } finally {
+      setIsSavingToGoogle(false)
     }
   }
 
@@ -449,7 +486,7 @@ export default function Dashboard(): React.ReactNode {
                 <FileText className="h-5 w-5" />
                 <CardTitle>Generated Materials</CardTitle>
               </div>
-              <CardDescription>AI-generated, differentiated resources</CardDescription>
+              <CardDescription></CardDescription>
             </CardHeader>
             <CardContent>
               {materials.length === 0 ? (
@@ -472,9 +509,26 @@ export default function Dashboard(): React.ReactNode {
                         <p className="font-medium">{material.title}</p>
                         <p className="text-sm text-muted-foreground">{material.difficulty}</p>
                       </div>
-                      <Button variant="ghost" size="icon" disabled>
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      <div className="flex flex-col items-end gap-2">
+                        {googleDocUrl ? (
+                          <a
+                            href={googleDocUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
+                          >
+                            Open in Google Docs
+                          </a>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={handleSaveToGoogleDoc}
+                            disabled={isSavingToGoogle || !generatedText.trim()}
+                          >
+                            {isSavingToGoogle ? 'Saving...' : 'Save to Google Drive'}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

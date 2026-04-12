@@ -3,8 +3,24 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  checkHealth: (): Promise<boolean> => ipcRenderer.invoke('health-check'),
-  googleAuth: () => ipcRenderer.invoke('google-auth')
+  checkHealth: (): Promise<boolean> => ipcRenderer.invoke('check-health'),
+
+  googleAuth: (): Promise<{
+    access_token?: string
+    refresh_token?: string
+    id_token?: string
+    token_type?: string
+    scope?: string
+    expiry_date?: number
+  }> => ipcRenderer.invoke('google-auth'),
+
+  saveGoogleDoc: (
+    payload: { title: string; content: string }
+  ): Promise<{
+    documentId: string
+    title: string
+    url: string
+  }> => ipcRenderer.invoke('google-save-doc', payload)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

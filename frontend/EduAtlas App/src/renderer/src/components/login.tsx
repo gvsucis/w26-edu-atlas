@@ -14,10 +14,41 @@ interface LoginProps {
   onLogin: (profile: InstructorProfile) => void
 }
 
+interface GoogleAuthTokens {
+  access_token?: string
+  refresh_token?: string
+  id_token?: string
+  token_type?: string
+  scope?: string
+  expiry_date?: number
+}
+
+interface GoogleIdTokenPayload {
+  name?: string
+  email?: string
+}
+
+function decodeJwtPayload<T>(token: string): T | null {
+  try {
+    const parts = token.split('.')
+    if (parts.length < 2) return null
+
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
+    const json = atob(padded)
+
+    return JSON.parse(json) as T
+  } catch (error) {
+    console.error('Failed to decode JWT payload:', error)
+    return null
+  }
+}
+
 export default function Login({ onLogin }: LoginProps): React.JSX.Element {
   const [fullName, setFullName] = useState('')
   const [school, setSchool] = useState('')
   const [errors, setErrors] = useState<{ fullName?: string; school?: string }>({})
+  const [googleError, setGoogleError] = useState('')
 
   function validate(): boolean {
     const next: { fullName?: string; school?: string } = {}
@@ -35,23 +66,25 @@ export default function Login({ onLogin }: LoginProps): React.JSX.Element {
     onLogin(profile)
   }
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async (): Promise<void> => {
     try {
-      const tokens = await window.api.googleAuth()
+      setGoogleError('')
 
-      console.log('OAuth success:', tokens)
+      const tokens = (await window.api.googleAuth()) as GoogleAuthTokens
+      const payload = tokens.id_token
+        ? decodeJwtPayload<GoogleIdTokenPayload>(tokens.id_token)
+        : null
 
-      // TEMP profile (we’ll replace with real data later)
       const profile: InstructorProfile = {
-        fullName: 'Google User',
-        school: 'Connected via Google'
+        fullName: payload?.name?.trim() || 'Google User',
+        school: payload?.email?.trim() || 'Connected via Google'
       }
 
       localStorage.setItem('eduatlas_user', JSON.stringify(profile))
       onLogin(profile)
-
     } catch (err) {
       console.error('Google login failed', err)
+      setGoogleError(err instanceof Error ? err.message : 'Google login failed.')
     }
   }
 
@@ -96,6 +129,10 @@ export default function Login({ onLogin }: LoginProps): React.JSX.Element {
               >
                 Continue with Google
               </Button>
+
+              {googleError && (
+                <p className="text-xs text-red-500 text-center">{googleError}</p>
+              )}
 
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <div className="flex-1 h-px bg-gray-200" />
