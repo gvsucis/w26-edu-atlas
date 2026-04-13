@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   BookOpen,
   Target,
@@ -36,6 +36,27 @@ interface GeneratedMaterial {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
 }
 
+interface HistoryEntry {
+  id: number
+  title: string
+  url?: string
+  timestamp: string
+}
+
+const HISTORY_KEY = 'eduatlas_history'
+
+function loadHistory(): HistoryEntry[] {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')
+  } catch {
+    return []
+  }
+}
+
+function saveHistory(entries: HistoryEntry[]): void {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(entries))
+}
+
 interface ValidationState {
   report: string
   raw?: Record<string, unknown>
@@ -66,6 +87,14 @@ export default function Dashboard(): React.ReactNode {
   const [isSavingToGoogle, setIsSavingToGoogle] = useState(false)
   const [googleDocUrl, setGoogleDocUrl] = useState('')
   const [googleSaveMessage, setGoogleSaveMessage] = useState('')
+
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [showAllHistory, setShowAllHistory] = useState(false)
+  const [currentHistoryId, setCurrentHistoryId] = useState<number | null>(null)
+
+  useEffect(() => {
+    setHistory(loadHistory())
+  }, [])
 
   const addObjective = (): void => {
     if (newObjectiveText.trim() === '') return
@@ -140,6 +169,17 @@ export default function Dashboard(): React.ReactNode {
           difficulty: objectives.length >= 3 ? 'Intermediate' : 'Beginner'
         }
       ])
+
+      const entryId = Date.now()
+      const entry: HistoryEntry = {
+        id: entryId,
+        title: `${lessonTopic.trim() || 'Untitled'} — ${deliverableType || 'Material'}`,
+        timestamp: new Date().toLocaleString()
+      }
+      const updated = [entry, ...loadHistory()]
+      saveHistory(updated)
+      setHistory(updated)
+      setCurrentHistoryId(entryId)
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : 'Generation failed.')
@@ -170,6 +210,13 @@ export default function Dashboard(): React.ReactNode {
 
       setGoogleDocUrl(result.url)
       setGoogleSaveMessage('Saved to Google Drive successfully.')
+
+      const existing = loadHistory()
+      const updated = existing.map((e) =>
+        e.id === currentHistoryId ? { ...e, url: result.url } : e
+      )
+      saveHistory(updated)
+      setHistory(updated)
     } catch (err) {
       console.error(err)
       setGoogleSaveMessage(
@@ -581,18 +628,92 @@ export default function Dashboard(): React.ReactNode {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
-                  <Clock className="h-8 w-8 mb-2 opacity-40" />
-                  <p className="text-sm">No generated materials yet</p>
-                </div>
+                {history.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
+                    <Clock className="h-8 w-8 mb-2 opacity-40" />
+                    <p className="text-sm">No generated materials yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {history.slice(0, 3).map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between text-sm">
+                        <div className="min-w-0">
+                          {entry.url ? (
+                            <a
+                              href={entry.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-medium text-primary hover:underline truncate block max-w-[200px]"
+                            >
+                              {entry.title}
+                            </a>
+                          ) : (
+                            <span className="font-medium truncate block max-w-[200px]">{entry.title}</span>
+                          )}
+                          <span className="text-xs text-muted-foreground">{entry.timestamp}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <Separator />
-                <button className="flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer mx-auto">
+                <button
+                  onClick={() => setShowAllHistory(true)}
+                  className="flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer mx-auto"
+                >
                   <span>View all generated materials</span>
                   <ChevronRight className="h-3 w-3" />
                 </button>
               </div>
             </CardContent>
           </Card>
+
+          {showAllHistory && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+              onClick={() => setShowAllHistory(false)}
+            >
+              <div
+                className="bg-background rounded-lg shadow-lg w-full max-w-lg max-h-[80vh] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between p-4 border-b">
+                  <h3 className="font-semibold text-base">All Generated Materials</h3>
+                  <button
+                    onClick={() => setShowAllHistory(false)}
+                    className="text-muted-foreground hover:text-foreground text-lg leading-none"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="overflow-y-auto p-4 space-y-3">
+                  {history.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">No history yet.</p>
+                  ) : (
+                    history.map((entry) => (
+                      <div key={entry.id} className="flex flex-col gap-0.5 border-b pb-2 last:border-0">
+                        {entry.url ? (
+                          <a
+                            href={entry.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm font-medium text-primary hover:underline"
+                          >
+                            {entry.title}
+                          </a>
+                        ) : (
+                          <span className="text-sm font-medium">{entry.title}</span>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {entry.url ? entry.timestamp : `${entry.timestamp} — not saved to Drive`}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
