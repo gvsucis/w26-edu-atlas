@@ -13,6 +13,7 @@ export interface GenerateRequest {
   classroom_context: string
   deliverable_type: 'Exam' | 'Quiz' | 'Homework' | 'Lesson Plan' | 'Activity' | 'Worksheet'
   objectives: LearningObjectiveInput[]
+  use_web_search: boolean
 }
 
 export interface GenerateResponse {
@@ -21,7 +22,8 @@ export interface GenerateResponse {
     type?: string
   }
   validation: {
-    report: Record<string, unknown>
+    report: string
+    raw?: Record<string, unknown>
     success: boolean
     attempts_used: number
     message?: string

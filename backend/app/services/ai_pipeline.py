@@ -7,10 +7,22 @@ from app.services.validation import validate_output
 
 # Will be used to determine if we should regenerate the content or not
 def passes_validation(validation: dict) -> bool:
-    constraint_score = validation.get("constraints", {}).get("score", 0.0)
-    overall_score = validation.get("judge", {}).get("overall_score", 0.0)
-    should_regenerate = validation.get("judge", {}).get("should_regenerate", True)
+    constraints = validation.get("constraints", {})
+    judge = validation.get("judge", {})
 
+    constraint_score = constraints.get("score", 0.0)
+    overall_score = judge.get("overall_score", 0.0)
+    should_regenerate = judge.get("should_regenerate", True)
+    judge_mode = judge.get("judge_mode", "llm")
+
+    # If we used the cheap validator, trust constraints + cheap regeneration signal
+    if judge_mode == "fast":
+        return not (
+            constraint_score < 0.8
+            or should_regenerate
+        )
+
+    # If we used the full LLM judge, also require overall score
     return not (
         constraint_score < 0.8
         or overall_score < 0.75
@@ -18,25 +30,23 @@ def passes_validation(validation: dict) -> bool:
     )
 
 
-# Main orchestration function using structured retrieval data
+# Main orchestration function using structured retrieval metadata
 def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
     rag_queries = build_rag_queries(req)
 
-    # debug, remove in final product
     print("\nRAG QUERIES")
     print(json.dumps(rag_queries, indent=2))
 
     retrieval_result = retrieve(rag_queries)
 
-    # debug, remove in final product
     print("\nRETRIEVAL RESULT")
     print(json.dumps(retrieval_result, indent=2)[:1500])
 
     generation_prompt = build_generation_prompt(req, retrieval_result)
 
     request_context = {
-        "subject": req.subject,
         "grade_band": req.grade_band,
+        "subject": req.subject,
         "lesson_topic": req.lesson_topic,
         "deliverable_type": req.deliverable_type,
         "duration_minutes": req.duration_minutes,
@@ -49,18 +59,36 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
         ),
     }
 
+    objective_parts = []
+    for obj in request_context["objectives"]:
+        if isinstance(obj, dict):
+            desc = obj.get("description")
+            if isinstance(desc, str):
+                objective_parts.append(desc)
+            else:
+                objective_parts.append(str(obj))
+        else:
+            objective_parts.append(str(obj))
 
-    # Validation pipeline
+    # A simplified version of the request to cut down on string length
+    user_request = (
+        f"Create a {req.deliverable_type} for {req.grade_band} {req.subject} "
+        f"about '{req.lesson_topic}' for {req.duration_minutes} minutes. "
+        f"Classroom context: {req.classroom_context}. "
+        f"Objectives: {'; '.join(objective_parts)}."
+    )
+
     current_output = generate_final(generation_prompt)
     current_validation = validate_output(
-        user_request=generation_prompt,
+        user_request,
         request_context=request_context,
         retrieval_result=retrieval_result,
         output=current_output,
+        force_judge=False,
     )
 
     print("\nATTEMPT 1 VALIDATION")
-    print(json.dumps(current_validation, indent=2))
+    print(current_validation["report"])
 
     if passes_validation(current_validation):
         return {
@@ -69,7 +97,8 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
                 "type": req.deliverable_type,
             },
             "validation": {
-                "report": current_validation,
+                "report": current_validation["report"],
+                "raw": current_validation,
                 "success": True,
                 "attempts_used": 1,
             },
@@ -88,14 +117,15 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
         )
 
         current_validation = validate_output(
-            user_request=generation_prompt,
+            user_request,
             request_context=request_context,
             retrieval_result=retrieval_result,
             output=current_output,
+            force_judge=True,
         )
 
         print(f"\nATTEMPT {attempt} VALIDATION")
-        print(json.dumps(current_validation, indent=2))
+        print(current_validation["report"])
 
         if passes_validation(current_validation):
             return {
@@ -104,7 +134,8 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
                     "type": req.deliverable_type,
                 },
                 "validation": {
-                    "report": current_validation,
+                    "report": current_validation["report"],
+                    "raw": current_validation,
                     "success": True,
                     "attempts_used": attempt,
                 },
@@ -119,7 +150,8 @@ def run_pipeline(req: GenerateRequest, max_attempts: int = 3) -> dict:
             "type": req.deliverable_type,
         },
         "validation": {
-            "report": current_validation,
+            "report": current_validation["report"],
+            "raw": current_validation,
             "success": False,
             "attempts_used": max_attempts,
             "message": f"Generation failed validation after {max_attempts} attempts.",

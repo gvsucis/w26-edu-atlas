@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   BookOpen,
   Target,
@@ -8,7 +8,9 @@ import {
   Plus,
   Trash2,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Clock,
+  ChevronRight
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './card'
 import { Button } from './button'
@@ -19,6 +21,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { Badge } from './badge'
 import { Separator } from './separator'
 import { generateContent } from '../lib/api'
+import { Switch } from './switch'
 
 interface LearningObjective {
   id: number
@@ -33,8 +36,30 @@ interface GeneratedMaterial {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
 }
 
+interface HistoryEntry {
+  id: number
+  title: string
+  url?: string
+  timestamp: string
+}
+
+const HISTORY_KEY = 'eduatlas_history'
+
+function loadHistory(): HistoryEntry[] {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')
+  } catch {
+    return []
+  }
+}
+
+function saveHistory(entries: HistoryEntry[]): void {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(entries))
+}
+
 interface ValidationState {
-  report: Record<string, unknown> | null
+  report: string
+  raw?: Record<string, unknown>
   success: boolean
   attempts_used: number
   message?: string
@@ -47,6 +72,7 @@ export default function Dashboard(): React.ReactNode {
   const [lessonTopic, setLessonTopic] = useState('')
   const [duration, setDuration] = useState(45)
   const [classroomContext, setClassroomContext] = useState('')
+  const [useWebSearch, setUseWebSearch] = useState(false)
   const [objectives, setObjectives] = useState<LearningObjective[]>([])
   const [newBloomLevel, setNewBloomLevel] = useState('Remember')
   const [newObjectiveText, setNewObjectiveText] = useState('')
@@ -57,6 +83,18 @@ export default function Dashboard(): React.ReactNode {
   const [validationState, setValidationState] = useState<ValidationState | null>(null)
   const [error, setError] = useState('')
   const [plan, setPlan] = useState<Record<string, unknown> | null>(null)
+
+  const [isSavingToGoogle, setIsSavingToGoogle] = useState(false)
+  const [googleDocUrl, setGoogleDocUrl] = useState('')
+  const [googleSaveMessage, setGoogleSaveMessage] = useState('')
+
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [showAllHistory, setShowAllHistory] = useState(false)
+  const [currentHistoryId, setCurrentHistoryId] = useState<number | null>(null)
+
+  useEffect(() => {
+    setHistory(loadHistory())
+  }, [])
 
   const addObjective = (): void => {
     if (newObjectiveText.trim() === '') return
@@ -82,8 +120,10 @@ export default function Dashboard(): React.ReactNode {
     setGeneratedText('')
     setValidationState(null)
     setPlan(null)
+    setGoogleDocUrl('')
+    setGoogleSaveMessage('')
 
-    // Pulls content from api, throws error if data doesn't match expected form
+    // Backend payload - Pulls content from api, throws error if data doesn't match expected form
     try {
       const result = await generateContent({
         subject,
@@ -101,14 +141,16 @@ export default function Dashboard(): React.ReactNode {
         objectives: objectives.map((obj) => ({
           bloom_level: obj.bloomLevel,
           text: obj.text
-        }))
+        })),
+        use_web_search: useWebSearch
       })
 
       setGeneratedText(result.deliverable.content)
       setPlan(result.metadata?.plan ?? null)
 
       setValidationState({
-        report: result.validation.report ?? null,
+        report: result.validation.report ?? '',
+        raw: result.validation.raw ?? undefined,
         success: result.validation.success,
         attempts_used: result.validation.attempts_used,
         message: result.validation.message
@@ -127,12 +169,61 @@ export default function Dashboard(): React.ReactNode {
           difficulty: objectives.length >= 3 ? 'Intermediate' : 'Beginner'
         }
       ])
+
+      const entryId = Date.now()
+      const entry: HistoryEntry = {
+        id: entryId,
+        title: `${lessonTopic.trim() || 'Untitled'} — ${deliverableType || 'Material'}`,
+        timestamp: new Date().toLocaleString()
+      }
+      const updated = [entry, ...loadHistory()]
+      saveHistory(updated)
+      setHistory(updated)
+      setCurrentHistoryId(entryId)
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : 'Generation failed.')
       setMaterials([])
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const handleSaveToGoogleDoc = async (): Promise<void> => {
+    if (!generatedText.trim()) {
+      setGoogleSaveMessage('No generated content is available to save.')
+      return
+    }
+
+    try {
+      setIsSavingToGoogle(true)
+      setGoogleSaveMessage('')
+
+      const trimmedTopic = lessonTopic.trim() || 'Untitled'
+      const trimmedType = deliverableType || 'Material'
+      const title = `EduAtlas - ${trimmedTopic} ${trimmedType}`
+
+      const result = await window.api.saveGoogleDoc({
+        title,
+        content: generatedText
+      })
+
+      setGoogleDocUrl(result.url)
+      setGoogleSaveMessage('Saved to Google Drive successfully.')
+
+      const existing = loadHistory()
+      const updated = existing.map((e) =>
+        e.id === currentHistoryId ? { ...e, url: result.url } : e
+      )
+      saveHistory(updated)
+      setHistory(updated)
+    } catch (err) {
+      console.error(err)
+      setGoogleSaveMessage(
+        err instanceof Error ? err.message : 'Failed to save to Google Drive.'
+      )
+    } finally {
+      setIsSavingToGoogle(false)
     }
   }
 
@@ -236,6 +327,22 @@ export default function Dashboard(): React.ReactNode {
                     placeholder="Describe any specific classroom needs, accommodations, or contextual information..."
                   />
                 </div>
+              
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <Label>Use Web Search</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Needed for current events, real-world context etc.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={useWebSearch}
+                    onCheckedChange={setUseWebSearch}
+                  />
+                </div>
+              </div>
+
               </div>
             </CardContent>
           </Card>
@@ -386,8 +493,15 @@ export default function Dashboard(): React.ReactNode {
                   )}
 
                   <div className="rounded-lg border bg-muted/30 p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-semibold">Validation Report</h3>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date().toISOString().split('T')[0]}
+                      </span>
+                    </div>
+
                     <pre className="whitespace-pre-wrap text-xs font-sans">
-                      {JSON.stringify(validationState.report, null, 2)}
+                      {validationState.report}
                     </pre>
                   </div>
                 </div>
@@ -419,7 +533,7 @@ export default function Dashboard(): React.ReactNode {
                 <FileText className="h-5 w-5" />
                 <CardTitle>Generated Materials</CardTitle>
               </div>
-              <CardDescription>AI-generated, differentiated resources</CardDescription>
+              <CardDescription></CardDescription>
             </CardHeader>
             <CardContent>
               {materials.length === 0 ? (
@@ -442,9 +556,26 @@ export default function Dashboard(): React.ReactNode {
                         <p className="font-medium">{material.title}</p>
                         <p className="text-sm text-muted-foreground">{material.difficulty}</p>
                       </div>
-                      <Button variant="ghost" size="icon" disabled>
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      <div className="flex flex-col items-end gap-2">
+                        {googleDocUrl ? (
+                          <a
+                            href={googleDocUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
+                          >
+                            Open in Google Docs
+                          </a>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={handleSaveToGoogleDoc}
+                            disabled={isSavingToGoogle || !generatedText.trim()}
+                          >
+                            {isSavingToGoogle ? 'Saving...' : 'Save to Google Drive'}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -486,6 +617,103 @@ export default function Dashboard(): React.ReactNode {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                History Log
+              </CardTitle>
+              <CardDescription>Recently generated materials</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {history.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
+                    <Clock className="h-8 w-8 mb-2 opacity-40" />
+                    <p className="text-sm">No generated materials yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {history.slice(0, 3).map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between text-sm">
+                        <div className="min-w-0">
+                          {entry.url ? (
+                            <a
+                              href={entry.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-medium text-primary hover:underline truncate block max-w-[200px]"
+                            >
+                              {entry.title}
+                            </a>
+                          ) : (
+                            <span className="font-medium truncate block max-w-[200px]">{entry.title}</span>
+                          )}
+                          <span className="text-xs text-muted-foreground">{entry.timestamp}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Separator />
+                <button
+                  onClick={() => setShowAllHistory(true)}
+                  className="flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer mx-auto"
+                >
+                  <span>View all generated materials</span>
+                  <ChevronRight className="h-3 w-3" />
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {showAllHistory && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+              onClick={() => setShowAllHistory(false)}
+            >
+              <div
+                className="bg-background rounded-lg shadow-lg w-full max-w-lg max-h-[80vh] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between p-4 border-b">
+                  <h3 className="font-semibold text-base">All Generated Materials</h3>
+                  <button
+                    onClick={() => setShowAllHistory(false)}
+                    className="text-muted-foreground hover:text-foreground text-lg leading-none"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="overflow-y-auto p-4 space-y-3">
+                  {history.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">No history yet.</p>
+                  ) : (
+                    history.map((entry) => (
+                      <div key={entry.id} className="flex flex-col gap-0.5 border-b pb-2 last:border-0">
+                        {entry.url ? (
+                          <a
+                            href={entry.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm font-medium text-primary hover:underline"
+                          >
+                            {entry.title}
+                          </a>
+                        ) : (
+                          <span className="text-sm font-medium">{entry.title}</span>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {entry.url ? entry.timestamp : `${entry.timestamp} — not saved to Drive`}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
