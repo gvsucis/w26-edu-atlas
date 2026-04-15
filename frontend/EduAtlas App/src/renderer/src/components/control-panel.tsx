@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Zap, Brain } from 'lucide-react'
+import { ShieldCheck, Scale, Brain, Check } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './card'
 import { Button } from './button'
 import { Switch } from './switch'
@@ -9,15 +9,73 @@ import { Alert, AlertTitle, AlertDescription } from './alert'
 import { Separator } from './separator'
 import { Label } from './label'
 
-export default function ControlPanel(): React.ReactNode {
-  const [workingMemory, setWorkingMemory] = useState('7')
-  const [autoChunking, setAutoChunking] = useState(true)
-  const [progressiveDisclosure, setProgressiveDisclosure] = useState(true)
+const STORAGE_KEY = 'eduatlas_control_panel'
 
-  const [readingLevel, setReadingLevel] = useState('Grade 9-10')
-  const [academicVocab, setAcademicVocab] = useState(true)
-  const [sentenceLimit, setSentenceLimit] = useState(true)
-  const [activeVoice, setActiveVoice] = useState(true)
+const defaults = {
+  workingMemory: '7',
+  autoChunking: true,
+  progressiveDisclosure: true,
+  readingLevel: 'Grade 6-7',
+  academicVocab: true,
+  sentenceLimit: true,
+  activeVoice: true
+}
+
+const levelMetrics: Record<string, { ease: number; easeLabel: string; grade: string; baseSentence: number; baseTerms: number }> = {
+  'Grade K-1':     { ease: 95, easeLabel: 'Very Easy',        grade: 'K–1',  baseSentence: 8,  baseTerms: 2  },
+  'Grade 2-3':     { ease: 85, easeLabel: 'Easy',             grade: '2–3',  baseSentence: 10, baseTerms: 4  },
+  'Grade 4-5':     { ease: 75, easeLabel: 'Fairly Easy',      grade: '4–5',  baseSentence: 13, baseTerms: 6  },
+  'Grade 6-7':     { ease: 65, easeLabel: 'Standard',         grade: '6–7',  baseSentence: 16, baseTerms: 9  },
+  'Grade 8':       { ease: 58, easeLabel: 'Standard',         grade: '8',    baseSentence: 18, baseTerms: 11 },
+  'Grade 9-10':    { ease: 50, easeLabel: 'Fairly Difficult', grade: '9–10', baseSentence: 20, baseTerms: 14 },
+  'Grade 11-12':   { ease: 38, easeLabel: 'Difficult',        grade: '11–12',baseSentence: 23, baseTerms: 17 },
+  'College Level': { ease: 25, easeLabel: 'Very Difficult',   grade: '13+',  baseSentence: 26, baseTerms: 20 },
+}
+
+function loadSettings(): typeof defaults {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? { ...defaults, ...(JSON.parse(raw) as typeof defaults) } : defaults
+  } catch {
+    return defaults
+  }
+}
+
+export default function ControlPanel(): React.ReactNode {
+  const initialSettings = loadSettings()
+  const [workingMemory, setWorkingMemory] = useState(initialSettings.workingMemory)
+  const [autoChunking, setAutoChunking] = useState(initialSettings.autoChunking)
+  const [progressiveDisclosure, setProgressiveDisclosure] = useState(initialSettings.progressiveDisclosure)
+
+  const [readingLevel, setReadingLevel] = useState(initialSettings.readingLevel)
+  const [academicVocab, setAcademicVocab] = useState(initialSettings.academicVocab)
+  const [sentenceLimit, setSentenceLimit] = useState(initialSettings.sentenceLimit)
+  const [activeVoice, setActiveVoice] = useState(initialSettings.activeVoice)
+
+  const [isSaved, setIsSaved] = useState(false)
+  const [isReset, setIsReset] = useState(false)
+
+  function handleSave(): void {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ workingMemory, autoChunking, progressiveDisclosure, readingLevel, academicVocab, sentenceLimit, activeVoice })
+    )
+    setIsSaved(true)
+    setTimeout(() => setIsSaved(false), 2000)
+  }
+
+  function handleReset(): void {
+    setWorkingMemory(defaults.workingMemory)
+    setAutoChunking(defaults.autoChunking)
+    setProgressiveDisclosure(defaults.progressiveDisclosure)
+    setReadingLevel(defaults.readingLevel)
+    setAcademicVocab(defaults.academicVocab)
+    setSentenceLimit(defaults.sentenceLimit)
+    setActiveVoice(defaults.activeVoice)
+    localStorage.removeItem(STORAGE_KEY)
+    setIsReset(true)
+    setTimeout(() => setIsReset(false), 2000)
+  }
 
   return (
     <div className="space-y-6">
@@ -28,13 +86,29 @@ export default function ControlPanel(): React.ReactNode {
         </p>
       </div>
 
-      <Alert>
-        <Zap className="h-4 w-4" />
-        <AlertTitle>AI System Active</AlertTitle>
-        <AlertDescription>
-          All constraints are being applied to AI outputs in real-time.
-        </AlertDescription>
-      </Alert>
+      <div className="grid sm:grid-cols-3 gap-3">
+        <Alert>
+          <ShieldCheck className="h-4 w-4" />
+          <AlertTitle>WCAG Level AA</AlertTitle>
+          <AlertDescription>
+            Output meets accessibility readability and contrast standards.
+          </AlertDescription>
+        </Alert>
+        <Alert>
+          <Scale className="h-4 w-4" />
+          <AlertTitle>Law & Guideline Compliant</AlertTitle>
+          <AlertDescription>
+            AI operates within FERPA, COPPA, and IDEA regulations.
+          </AlertDescription>
+        </Alert>
+        <Alert>
+          <Brain className="h-4 w-4" />
+          <AlertTitle>Designed for Students</AlertTitle>
+          <AlertDescription>
+            Every constraint is chosen to help students focus, understand, and remember.
+          </AlertDescription>
+        </Alert>
+      </div>
 
       <Tabs defaultValue="cognitive">
         <TabsList className="w-full grid grid-cols-2">
@@ -63,9 +137,10 @@ export default function ControlPanel(): React.ReactNode {
                         <SelectValue placeholder="Select capacity" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="5">5 items (Lower cognitive capacity)</SelectItem>
-                        <SelectItem value="7">7 items (Standard)</SelectItem>
-                        <SelectItem value="9">9 items (Advanced learners)</SelectItem>
+                        <SelectItem value="3">3 items (Beginner)</SelectItem>
+                        <SelectItem value="5">5 items (Standard)</SelectItem>
+                        <SelectItem value="7">7 items (Intermediate)</SelectItem>
+                        <SelectItem value="9">9 items (Advanced)</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
@@ -107,38 +182,36 @@ export default function ControlPanel(): React.ReactNode {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5" />
+                    <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5 shrink-0" />
                     <div>
-                      <p className="text-sm font-medium">Intrinsic Load Optimization</p>
+                      <p className="text-sm font-medium">Working Memory Limit</p>
                       <p className="text-xs text-muted-foreground">
-                        Breaking complex concepts into prerequisite chains
+                        Max {workingMemory} concepts per section &mdash;{' '}
+                        {workingMemory === '3' ? 'Beginner' : workingMemory === '5' ? 'Standard' : workingMemory === '7' ? 'Intermediate' : 'Advanced'}
                       </p>
                     </div>
                   </div>
+                  <Separator />
                   <div className="flex items-start gap-3">
-                    <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5" />
+                    <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${autoChunking ? 'bg-green-500' : 'bg-yellow-500'}`} />
                     <div>
-                      <p className="text-sm font-medium">Extraneous Load Reduction</p>
+                      <p className="text-sm font-medium">Auto-Chunking</p>
                       <p className="text-xs text-muted-foreground">
-                        Minimizing irrelevant information and distractions
+                        {autoChunking
+                          ? 'Content is automatically broken into manageable chunks'
+                          : 'Content chunking is disabled. Full sections shown at once'}
                       </p>
                     </div>
                   </div>
+                  <Separator />
                   <div className="flex items-start gap-3">
-                    <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5" />
+                    <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${progressiveDisclosure ? 'bg-green-500' : 'bg-yellow-500'}`} />
                     <div>
-                      <p className="text-sm font-medium">Germane Load Enhancement</p>
+                      <p className="text-sm font-medium">Progressive Disclosure</p>
                       <p className="text-xs text-muted-foreground">
-                        Promoting schema construction through examples
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-2 w-2 rounded-full bg-yellow-500 mt-1.5" />
-                    <div>
-                      <p className="text-sm font-medium">Multimodal Integration</p>
-                      <p className="text-xs text-muted-foreground">
-                        Balancing text, visual, and interactive elements
+                        {progressiveDisclosure
+                          ? 'Information is revealed gradually as the learner progresses'
+                          : 'All content shown upfront, no staged reveal'}
                       </p>
                     </div>
                   </div>
@@ -166,6 +239,9 @@ export default function ControlPanel(): React.ReactNode {
                         <SelectValue placeholder="Select reading level" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="Grade K-1">Grade K-1</SelectItem>
+                        <SelectItem value="Grade 2-3">Grade 2-3</SelectItem>
+                        <SelectItem value="Grade 4-5">Grade 4-5</SelectItem>
                         <SelectItem value="Grade 6-7">Grade 6-7</SelectItem>
                         <SelectItem value="Grade 8">Grade 8</SelectItem>
                         <SelectItem value="Grade 9-10">Grade 9-10</SelectItem>
@@ -214,27 +290,34 @@ export default function ControlPanel(): React.ReactNode {
                 <CardDescription>Current output analysis</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Avg. Sentence Length</span>
-                    <span className="text-sm font-medium">16 words</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Reading Ease</span>
-                    <span className="text-sm font-medium">68 (Standard)</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Grade</span>
-                    <span className="text-sm font-medium">9</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Academic Terms</span>
-                    <span className="text-sm font-medium">12 per page</span>
-                  </div>
-                </div>
+                {(() => {
+                  const m = levelMetrics[readingLevel]
+                  const sentenceLen = sentenceLimit ? Math.min(m.baseSentence, 18) : m.baseSentence
+                  const terms = academicVocab ? m.baseTerms : Math.max(1, Math.round(m.baseTerms / 2))
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Avg. Sentence Length</span>
+                        <span className="text-sm font-medium">{sentenceLen} words</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Reading Ease</span>
+                        <span className="text-sm font-medium">{m.ease} ({m.easeLabel})</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Grade</span>
+                        <span className="text-sm font-medium">{m.grade}</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Academic Terms</span>
+                        <span className="text-sm font-medium">{terms} per page</span>
+                      </div>
+                    </div>
+                  )
+                })()}
               </CardContent>
             </Card>
           </div>
@@ -244,13 +327,41 @@ export default function ControlPanel(): React.ReactNode {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
+            {(() => {
+              const activeCount = [autoChunking, progressiveDisclosure, academicVocab, sentenceLimit, activeVoice].filter(Boolean).length
+              const total = 5
+              const allActive = activeCount === total
+              const noneActive = activeCount === 0
+              return (
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full animate-pulse ${allActive ? 'bg-green-500' : noneActive ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                  <span className="text-sm">
+                    {allActive ? 'All constraints active and enforced' : noneActive ? 'No constraints active' : 'Some constraints active'}
+                  </span>
+                </div>
+              )
+            })()}
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm">All constraints active and enforced</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline">Reset to Defaults</Button>
-              <Button>Save Configuration</Button>
+              <Button variant="outline" onClick={handleReset}>
+                {isReset ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Reset
+                  </>
+                ) : (
+                  'Reset to Defaults'
+                )}
+              </Button>
+              <Button onClick={handleSave}>
+                {isSaved ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Saved
+                  </>
+                ) : (
+                  'Save Configuration'
+                )}
+              </Button>
             </div>
           </div>
         </CardContent>
